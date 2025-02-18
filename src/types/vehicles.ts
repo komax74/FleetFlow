@@ -6,9 +6,9 @@ export interface Vehicle {
   mileage: number;
   image_url?: string;
   status: "available" | "booked" | "maintenance";
-  maintenanceInfo?: {
-    startDate: string;
-    endDate: string;
-    reason: string;
-  };
+  maintenance_start?: string;
+  maintenance_end?: string;
+  maintenance_reason?: string;
+  created_at?: string;
+  updated_at?: string;
 }
