@@ -44,9 +44,9 @@ const Home = ({ initialView = "grid" }: HomeProps) => {
       <Dialog open={showBookingDialog} onOpenChange={setShowBookingDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <div className="grid gap-4 py-4">
-            <h2 className="text-lg font-semibold">Book a Vehicle</h2>
+            <h2 className="text-lg font-semibold">Prenota un Veicolo</h2>
             <p className="text-sm text-gray-500">
-              Select your booking details below.
+              Seleziona i dettagli della prenotazione qui sotto.
             </p>
           </div>
         </DialogContent>

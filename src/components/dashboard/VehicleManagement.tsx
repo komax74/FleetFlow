@@ -4,11 +4,12 @@ import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Plus, Settings, AlertTriangle, X } from "lucide-react";
+import { Plus, Settings, Wrench, X } from "lucide-react";
 import { ImageUpload } from "../ui/image-upload";
 import { DateRange } from "react-date-range";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
+import { it } from "date-fns/locale";
 import {
   Dialog,
   DialogContent,
@@ -208,7 +209,7 @@ const VehicleManagement = () => {
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="brand">Brand</Label>
+                    <Label htmlFor="brand">Marca</Label>
                     <Input
                       id="brand"
                       value={newVehicle.brand}
@@ -219,7 +220,7 @@ const VehicleManagement = () => {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="model">Model</Label>
+                    <Label htmlFor="model">Modello</Label>
                     <Input
                       id="model"
                       value={newVehicle.model}
@@ -230,7 +231,7 @@ const VehicleManagement = () => {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="license_plate">License Plate</Label>
+                    <Label htmlFor="license_plate">Targa</Label>
                     <Input
                       id="license_plate"
                       value={newVehicle.license_plate}
@@ -244,7 +245,7 @@ const VehicleManagement = () => {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="mileage">Mileage (km)</Label>
+                    <Label htmlFor="mileage">Chilometraggio (km)</Label>
                     <Input
                       id="mileage"
                       type="number"
@@ -476,7 +477,7 @@ const VehicleManagement = () => {
                             size="icon"
                             className="hover:bg-gray-50 rounded-full"
                           >
-                            <AlertTriangle className="h-4 w-4" />
+                            <Wrench className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
                         <DialogContent className="rounded-[20px]">
@@ -535,6 +536,7 @@ const VehicleManagement = () => {
                                     })
                                   }
                                   minDate={new Date()}
+                                  locale={it}
                                 />
                               </div>
                               <div className="grid gap-2">

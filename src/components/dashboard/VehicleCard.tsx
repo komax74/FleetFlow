@@ -2,7 +2,7 @@ import React from "react";
 import { Card, CardContent, CardFooter, CardHeader } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Calendar, Car, Clock, User } from "lucide-react";
+import { Calendar, Car, Clock, User, Wrench } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 type VehicleStatus =
@@ -20,6 +20,7 @@ interface VehicleCardProps {
   currentUser?: {
     name: string;
     avatar: string;
+    location?: string;
   };
   bookingTime?: string;
   onBook?: () => void;
@@ -111,8 +112,9 @@ const VehicleCard = ({
             <span className="ml-2 text-gray-600">{model}</span>
           </div>
           <Badge
-            className={`absolute top-4 right-4 ${getStatusStyles(status)}`}
+            className={`absolute top-4 right-4 ${getStatusStyles(status)} flex items-center gap-1`}
           >
+            {status === "maintenance" && <Wrench className="h-3 w-3" />}
             {getStatusText(status)}
           </Badge>
         </div>
@@ -126,6 +128,9 @@ const VehicleCard = ({
               {license_plate && (
                 <p className="text-sm text-gray-500">{license_plate}</p>
               )}
+              <p className="text-sm text-gray-500 mt-1">
+                Location: {currentUser?.location || "posizione non impostata"}
+              </p>
             </div>
           </div>
         </div>

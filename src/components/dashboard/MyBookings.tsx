@@ -3,6 +3,13 @@ import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { Pencil, Trash2 } from "lucide-react";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -24,6 +31,7 @@ import {
 } from "../ui/dialog";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { Textarea } from "../ui/textarea";
 import { useToast } from "../ui/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
@@ -34,7 +42,11 @@ const MyBookings = () => {
   const { toast } = useToast();
   const [bookings, setBookings] = useState([]);
   const [editingBooking, setEditingBooking] = useState(null);
-  const [returnInfo, setReturnInfo] = useState({ mileage: "", location: "" });
+  const [returnInfo, setReturnInfo] = useState({
+    mileage: "",
+    location: "",
+    notes: "",
+  });
   const [showAllBookings, setShowAllBookings] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
@@ -108,7 +120,11 @@ const MyBookings = () => {
       // Update booking status
       const { error: bookingError } = await supabase
         .from("bookings")
-        .update({ status: "completed" })
+        .update({
+          status: "completed",
+          return_location: returnInfo.location,
+          return_notes: returnInfo.notes,
+        })
         .eq("id", booking.id);
 
       if (bookingError) throw bookingError;
@@ -126,7 +142,7 @@ const MyBookings = () => {
         description: "Veicolo restituito con successo",
       });
 
-      setReturnInfo({ mileage: "", location: "" });
+      setReturnInfo({ mileage: "", location: "", notes: "" });
       fetchBookings();
     } catch (error) {
       console.error("Error returning vehicle:", error);
@@ -217,13 +233,15 @@ const MyBookings = () => {
                           </p>
                           <div className="mt-2 space-y-1">
                             <p className="text-sm">
-                              Data:{" "}
+                              <span className="font-medium">Inizio:</span>{" "}
                               {new Date(
                                 booking.start_date,
-                              ).toLocaleDateString()}
+                              ).toLocaleDateString()}{" "}
+                              {booking.pickup_time.slice(0, 5)}
                             </p>
                             <p className="text-sm">
-                              Orario: {booking.pickup_time.slice(0, 5)} -{" "}
+                              <span className="font-medium">Fine:</span>{" "}
+                              {new Date(booking.end_date).toLocaleDateString()}{" "}
                               {booking.return_time.slice(0, 5)}
                             </p>
                           </div>
@@ -308,15 +326,49 @@ const MyBookings = () => {
                               </div>
                               <div className="grid gap-2">
                                 <Label>Posizione di restituzione</Label>
-                                <Input
+                                <Select
                                   value={returnInfo.location}
+                                  onValueChange={(value) =>
+                                    setReturnInfo({
+                                      ...returnInfo,
+                                      location: value,
+                                    })
+                                  }
+                                >
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Seleziona posizione" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Fronte Ufficio">
+                                      Fronte Ufficio
+                                    </SelectItem>
+                                    <SelectItem value="Fronte Sanar">
+                                      Fronte Sanar
+                                    </SelectItem>
+                                    <SelectItem value="Lato Ufficio">
+                                      Lato Ufficio
+                                    </SelectItem>
+                                    <SelectItem value="Fronte Gavabaccio">
+                                      Fronte Gavabaccio
+                                    </SelectItem>
+                                    <SelectItem value="Lato Veraldi">
+                                      Lato Veraldi
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="grid gap-2 mt-2">
+                                <Label>Note</Label>
+                                <Textarea
+                                  value={returnInfo.notes}
                                   onChange={(e) =>
                                     setReturnInfo({
                                       ...returnInfo,
-                                      location: e.target.value,
+                                      notes: e.target.value,
                                     })
                                   }
-                                  placeholder="Es. Parcheggio aziendale"
+                                  placeholder="Inserisci eventuali note sulla restituzione"
+                                  className="min-h-[80px]"
                                 />
                               </div>
                             </div>

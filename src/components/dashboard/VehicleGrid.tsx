@@ -86,13 +86,25 @@ const VehicleGrid = ({
       <div className="max-w-[1400px] mx-auto w-full rounded-[20px]">
         <div className="text-center mb-12">
           <div className="text-5xl font-bold mb-4">
-            {new Date().toLocaleString("it-IT", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-              timeZone: "Europe/Rome",
-            })}
+            {new Date()
+              .toLocaleString("it-IT", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+                timeZone: "Europe/Rome",
+              })
+              .charAt(0)
+              .toUpperCase() +
+              new Date()
+                .toLocaleString("it-IT", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                  timeZone: "Europe/Rome",
+                })
+                .slice(1)}
           </div>
         </div>
         <QuickActions />
@@ -154,7 +166,15 @@ const VehicleGrid = ({
               avatar:
                 booking.profiles?.avatar_url ||
                 `https://api.dicebear.com/7.x/avataaars/svg?seed=${booking.user_id}`,
+              location: booking.return_location || "",
             }));
+
+            // Get the last return location for this vehicle
+            const lastBooking = bookings
+              .filter((b) => b.vehicle_id === vehicle.id && b.return_location)
+              .sort((a, b) => new Date(b.end_date) - new Date(a.end_date))[0];
+
+            const lastLocation = lastBooking?.return_location || "";
 
             const bookingTimes = todayBookings.map(
               (booking) =>
@@ -171,7 +191,11 @@ const VehicleGrid = ({
                 status={currentStatus}
                 onBook={() => onBookVehicle(vehicle.id)}
                 onReturn={() => onReturnVehicle(vehicle.id)}
-                currentUser={currentUsers.length > 0 ? currentUsers : undefined}
+                currentUser={
+                  currentUsers.length > 0
+                    ? { ...currentUsers[0], location: lastLocation }
+                    : { name: "", avatar: "", location: lastLocation }
+                }
                 bookingTime={bookingTimes.length > 0 ? bookingTimes : undefined}
               />
             );

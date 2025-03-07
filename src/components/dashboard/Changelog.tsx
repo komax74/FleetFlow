@@ -5,6 +5,35 @@ interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "0.8",
+    changes: [
+      "Migliorato sistema di notifiche",
+      "Aggiunto supporto HTML nei messaggi",
+      "Ottimizzata visualizzazione mobile",
+      "Migliorata UI delle notifiche",
+      "Aggiunto sistema di apertura diretta notifiche",
+    ],
+  },
+  {
+    version: "0.7",
+    changes: [
+      "Aggiunto menu hamburger per dispositivi mobili",
+      "Migliorata visualizzazione storico prenotazioni",
+      "Aggiunta posizione veicoli nelle card",
+      "Implementato footer personalizzabile",
+      "Aggiunta sezione impostazioni per amministratori",
+    ],
+  },
+  {
+    version: "0.6",
+    changes: [
+      "Modernizzato calendario prenotazioni",
+      "Migliorata visualizzazione prenotazioni multi-giorno",
+      "Ottimizzata visualizzazione mobile",
+      "Risolti problemi di sovrapposizione eventi",
+    ],
+  },
+  {
     version: "0.5",
     changes: [
       "Migliorata gestione immagini veicoli",

@@ -28,9 +28,3 @@ dist-ssr
 **/tempobook/storyboards/
 
 core
-
-# Sensitive files
-.env
-src/lib/supabase.ts
-scripts/create-admin.ts
-supabase/migrations/

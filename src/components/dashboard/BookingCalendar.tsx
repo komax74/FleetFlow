@@ -2,6 +2,7 @@ import React from "react";
 import { DateRange } from "react-date-range";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
+import { it } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import {
   Select,
@@ -394,6 +395,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                       showDateDisplay={false}
                       className="border-0"
                       dayContentRenderer={customDayContent}
+                      locale={it}
                     />
                   </div>
                   {!selectedVehicle && (
@@ -520,10 +522,13 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                           localEndDate.setHours(0, 0, 0, 0);
 
                           // Format dates in YYYY-MM-DD format
-                          const start_date =
-                            localStartDate.toLocaleDateString("en-CA");
-                          const end_date =
-                            localEndDate.toLocaleDateString("en-CA");
+                          // Formato YYYY-MM-DD richiesto per il database
+                          const start_date = localStartDate
+                            .toISOString()
+                            .split("T")[0];
+                          const end_date = localEndDate
+                            .toISOString()
+                            .split("T")[0];
 
                           const bookingData = {
                             vehicle_id: selectedVehicle,

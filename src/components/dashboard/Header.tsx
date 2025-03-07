@@ -11,7 +11,6 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import {
-  Bell,
   Calendar,
   Plus,
   LogOut,
@@ -28,6 +27,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
+import NotificationSystem from "../notifications/NotificationSystem.jsx";
 
 interface HeaderProps {
   onSettingsClick?: () => void;
@@ -46,7 +46,7 @@ const Header = ({
   if (!user || !profile) return null;
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-[72px] z-50">
+    <header className="fixed top-0 left-0 right-0 h-[72px] z-50 bg-transparent backdrop-blur-md">
       <div className="relative h-full px-6 flex items-center justify-between">
         <div className="flex items-center space-x-6">
           {/* Logo */}
@@ -61,7 +61,7 @@ const Header = ({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="text-xs text-gray-500 cursor-pointer">
-                      v.0.5
+                      v.0.8
                     </div>
                   </TooltipTrigger>
                   <TooltipContent className="w-64 p-2">
@@ -85,7 +85,7 @@ const Header = ({
             </div>
           </div>
 
-          {/* Navigation */}
+          {/* Navigation - Desktop */}
           <nav className="hidden md:flex items-center space-x-4">
             <Button variant="ghost" onClick={() => navigate("/book")}>
               <Plus className="h-4 w-4 mr-2" />
@@ -99,15 +99,104 @@ const Header = ({
               <Calendar className="h-4 w-4 mr-2" />
               Calendario
             </Button>
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/booking-history")}
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Storico Prenotazioni
+            </Button>
           </nav>
         </div>
 
         <div className="flex items-center space-x-4">
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full" />
-          </Button>
+          <NotificationSystem />
+
+          {/* Mobile Menu Button */}
+          <div className="md:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="lucide lucide-menu"
+                  >
+                    <line x1="4" x2="20" y1="12" y2="12" />
+                    <line x1="4" x2="20" y1="6" y2="6" />
+                    <line x1="4" x2="20" y1="18" y2="18" />
+                  </svg>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => navigate("/book")}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Prenota Auto
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/my-bookings")}>
+                  <CarFront className="h-4 w-4 mr-2" />
+                  Le mie prenotazioni
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/calendar")}>
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Calendario
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/booking-history")}>
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Storico Prenotazioni
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {profile.role === "admin" && (
+                  <>
+                    <DropdownMenuItem
+                      onClick={() => navigate("/fleet-management")}
+                    >
+                      <CarFront className="h-4 w-4 mr-2" />
+                      Gestione Veicoli
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => navigate("/user-management")}
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      Gestione Utenti
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => navigate("/notifications/send")}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-4 w-4 mr-2"
+                      >
+                        <path d="M22 2L11 13" />
+                        <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+                      </svg>
+                      Invia Notifiche
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/settings")}>
+                      <Settings className="h-4 w-4 mr-2" />
+                      Impostazioni
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
           {/* User Menu */}
           <DropdownMenu>
@@ -170,7 +259,27 @@ const Header = ({
                     Gestione Utenti
                   </DropdownMenuItem>
 
-                  <DropdownMenuItem onClick={onSettingsClick}>
+                  <DropdownMenuItem
+                    onClick={() => navigate("/notifications/send")}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-4 w-4 mr-2"
+                    >
+                      <path d="M22 2L11 13" />
+                      <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+                    </svg>
+                    Invia Notifiche
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/settings")}>
                     <Settings className="h-4 w-4 mr-2" />
                     Impostazioni
                   </DropdownMenuItem>

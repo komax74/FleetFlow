@@ -26,18 +26,18 @@ export default function LoginForm() {
     let isValid = true;
 
     if (!email) {
-      newErrors.email = "Email is required";
+      newErrors.email = "Email obbligatoria";
       isValid = false;
     } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(email)) {
-      newErrors.email = "Invalid email address";
+      newErrors.email = "Indirizzo email non valido";
       isValid = false;
     }
 
     if (!password) {
-      newErrors.password = "Password is required";
+      newErrors.password = "Password obbligatoria";
       isValid = false;
     } else if (password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+      newErrors.password = "La password deve contenere almeno 6 caratteri";
       isValid = false;
     }
 
@@ -55,17 +55,17 @@ export default function LoginForm() {
     try {
       await signIn(email, password);
       toast({
-        title: "Login successful",
-        description: "Welcome back!",
+        title: "Accesso riuscito",
+        description: "Bentornato!",
       });
     } catch (error) {
       setErrors({
-        email: "Invalid email or password",
-        password: "Invalid email or password",
+        email: "Email o password non validi",
+        password: "Email o password non validi",
       });
       toast({
-        title: "Error",
-        description: "Invalid email or password",
+        title: "Errore",
+        description: "Email o password non validi",
         variant: "destructive",
       });
     } finally {
@@ -86,9 +86,10 @@ export default function LoginForm() {
       </div>
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Login</CardTitle>
+          <CardTitle>Accesso</CardTitle>
           <CardDescription>
-            Enter your credentials to access the fleet management system.
+            Inserisci le tue credenziali per accedere al sistema di gestione
+            della flotta.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -98,7 +99,7 @@ export default function LoginForm() {
               <Input
                 id="email"
                 type="email"
-                placeholder="Enter your email"
+                placeholder="Inserisci la tua email"
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
@@ -119,7 +120,7 @@ export default function LoginForm() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="Inserisci la tua password"
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
@@ -142,7 +143,7 @@ export default function LoginForm() {
               className="w-full"
               disabled={loading || !email || !password}
             >
-              {loading ? "Loading..." : "Login"}
+              {loading ? "Caricamento..." : "Accedi"}
             </Button>
           </form>
         </CardContent>
