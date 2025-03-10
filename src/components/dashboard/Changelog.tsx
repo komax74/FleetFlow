@@ -5,6 +5,16 @@ interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "0.9",
+    changes: [
+      "Migliorata visualizzazione prenotazioni",
+      "Aggiunto bordo colorato per stato prenotazioni",
+      "Corretto ordinamento prenotazioni",
+      "Migliorata logica di gestione prenotazioni",
+      "Preparazione per integrazione Firebase",
+    ],
+  },
+  {
     version: "0.8",
     changes: [
       "Migliorato sistema di notifiche",

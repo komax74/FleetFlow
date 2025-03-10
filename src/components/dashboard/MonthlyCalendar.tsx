@@ -17,12 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 import { getStoredBookings } from "@/lib/localBookings";
 import { supabase } from "@/lib/supabase";
 import Header from "./Header";
@@ -349,6 +344,8 @@ const MonthlyCalendar = () => {
     })
     .flat(); // Appiattisce l'array di array per le prenotazioni multi-giorno
 
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+
   const EventComponent = ({ event }: any) => {
     // Applica lo stile direttamente all'elemento dell'evento
     const eventStyle = event.style || {};
@@ -367,118 +364,32 @@ const MonthlyCalendar = () => {
     }, [event.title, eventStyle.backgroundColor]);
 
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger className="w-full h-full flex items-center gap-2 p-1">
-            {viewMode === "users" ? (
-              <Avatar className="h-6 w-6">
-                <AvatarImage
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${event.booking.profiles?.full_name || event.booking.user_id}`}
-                />
-                <AvatarFallback>U</AvatarFallback>
-              </Avatar>
-            ) : (
-              <Avatar className="h-6 w-6">
-                <AvatarImage
-                  src={
-                    event.booking.vehicles?.image_url ||
-                    `https://via.placeholder.com/150?text=${event.booking.vehicles?.brand}`
-                  }
-                />
-                <AvatarFallback>
-                  {event.booking.vehicles?.brand?.[0] || "V"}
-                </AvatarFallback>
-              </Avatar>
-            )}
-            <span className="text-xs truncate">{event.title}</span>
-          </TooltipTrigger>
-          <TooltipContent className="p-4 w-80 bg-white shadow-lg rounded-lg border border-gray-200">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 border-b pb-3">
-                <div className="flex-shrink-0">
-                  {viewMode === "users" ? (
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage
-                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${event.booking.profiles?.full_name || event.booking.user_id}`}
-                      />
-                      <AvatarFallback>U</AvatarFallback>
-                    </Avatar>
-                  ) : (
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage
-                        src={
-                          event.booking.vehicles?.image_url ||
-                          `https://via.placeholder.com/150?text=${event.booking.vehicles?.brand}`
-                        }
-                      />
-                      <AvatarFallback>
-                        {event.booking.vehicles?.brand?.[0] || "V"}
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold">
-                    {event.booking.profiles?.full_name ||
-                      `User ${event.booking.user_id}`}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {event.booking.profiles?.company || ""}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-start">
-                  <div className="w-28 text-xs font-medium">Veicolo:</div>
-                  <div className="text-xs font-semibold">
-                    {event.booking.vehicles?.brand}{" "}
-                    {event.booking.vehicles?.model}
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <div className="w-28 text-xs font-medium">Targa:</div>
-                  <div className="text-xs">
-                    {event.booking.vehicles?.license_plate}
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <div className="w-28 text-xs font-medium">Data prelievo:</div>
-                  <div className="text-xs">
-                    {new Date(event.booking.start_date).toLocaleDateString(
-                      "it-IT",
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <div className="w-28 text-xs font-medium">Ora prelievo:</div>
-                  <div className="text-xs">
-                    {event.booking.pickup_time?.slice(0, 5)}
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <div className="w-28 text-xs font-medium">
-                    Data riconsegna:
-                  </div>
-                  <div className="text-xs">
-                    {new Date(event.booking.end_date).toLocaleDateString(
-                      "it-IT",
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <div className="w-28 text-xs font-medium">
-                    Ora riconsegna:
-                  </div>
-                  <div className="text-xs">
-                    {event.booking.return_time?.slice(0, 5)}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <div
+        className="w-full h-full flex items-center gap-2 p-1 cursor-pointer"
+        onClick={() => setSelectedEvent(event)}
+      >
+        {viewMode === "users" ? (
+          <Avatar className="h-6 w-6">
+            <AvatarImage
+              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${event.booking.profiles?.full_name || event.booking.user_id}`}
+            />
+            <AvatarFallback>U</AvatarFallback>
+          </Avatar>
+        ) : (
+          <Avatar className="h-6 w-6">
+            <AvatarImage
+              src={
+                event.booking.vehicles?.image_url ||
+                `https://via.placeholder.com/150?text=${event.booking.vehicles?.brand}`
+              }
+            />
+            <AvatarFallback>
+              {event.booking.vehicles?.brand?.[0] || "V"}
+            </AvatarFallback>
+          </Avatar>
+        )}
+        <span className="text-xs truncate">{event.title}</span>
+      </div>
     );
   };
 
@@ -693,6 +604,113 @@ const MonthlyCalendar = () => {
           <div className="mt-6 px-6">
             <BookingTable currentDate={date} currentView={currentView} />
           </div>
+
+          {/* Event Details Modal */}
+          {selectedEvent && (
+            <div
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+              onClick={() => setSelectedEvent(null)}
+            >
+              <div
+                className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-xl font-semibold">
+                      Dettagli Prenotazione
+                    </h3>
+                    <button
+                      className="text-gray-400 hover:text-gray-600"
+                      onClick={() => setSelectedEvent(null)}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M18 6 6 18" />
+                        <path d="m6 6 12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="flex items-start gap-4 mb-3">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage
+                          src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedEvent.booking.profiles?.full_name || selectedEvent.booking.user_id}`}
+                        />
+                        <AvatarFallback>U</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">
+                          {selectedEvent.booking.profiles?.full_name ||
+                            "Utente"}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {selectedEvent.booking.profiles?.company || ""}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-4 mb-3">
+                      <img
+                        src={
+                          selectedEvent.booking.vehicles?.image_url ||
+                          "https://via.placeholder.com/150?text=Auto"
+                        }
+                        alt={selectedEvent.booking.vehicles?.model || "Veicolo"}
+                        className="w-20 h-14 object-cover rounded-md"
+                      />
+                      <div>
+                        <p className="font-medium">
+                          {selectedEvent.booking.vehicles?.brand}{" "}
+                          {selectedEvent.booking.vehicles?.model}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {selectedEvent.booking.vehicles?.license_plate}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">
+                          Prelievo
+                        </p>
+                        <p className="text-sm">
+                          {new Date(
+                            selectedEvent.booking.start_date,
+                          ).toLocaleDateString()}
+                          <br />
+                          {selectedEvent.booking.pickup_time.slice(0, 5)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">
+                          Riconsegna
+                        </p>
+                        <p className="text-sm">
+                          {new Date(
+                            selectedEvent.booking.end_date,
+                          ).toLocaleDateString()}
+                          <br />
+                          {selectedEvent.booking.return_time.slice(0, 5)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

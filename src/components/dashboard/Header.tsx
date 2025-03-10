@@ -61,7 +61,7 @@ const Header = ({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="text-xs text-gray-500 cursor-pointer">
-                      v.0.8
+                      v.0.9
                     </div>
                   </TooltipTrigger>
                   <TooltipContent className="w-64 p-2">
