@@ -5,6 +5,46 @@ interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "0.9.4",
+    changes: [
+      "Risolto problema di visualizzazione calendario",
+      "Migliorata interfaccia utente per dispositivi mobili",
+      "Ottimizzato sistema di notifiche email",
+      "Aggiornate dipendenze del progetto",
+      "Migliorata stabilità generale dell'applicazione",
+    ],
+  },
+  {
+    version: "0.9.3",
+    changes: [
+      "Riattivato sistema di notifiche push con Firebase",
+      "Implementato sistema di invio email automatiche",
+      "Migliorata gestione dei token FCM",
+      "Ottimizzato sistema di notifiche multi-canale",
+      "Aggiunto supporto per template email personalizzati",
+    ],
+  },
+  {
+    version: "0.9.2",
+    changes: [
+      "Risolto problema con le notifiche in tempo reale",
+      "Implementato sistema di polling per le notifiche",
+      "Migliorata gestione degli errori nelle notifiche",
+      "Ottimizzato invio notifiche batch agli amministratori",
+      "Aggiunto logging dettagliato per debug",
+    ],
+  },
+  {
+    version: "0.9.1",
+    changes: [
+      "Integrazione Firebase per notifiche push",
+      "Risolto problema con le notifiche",
+      "Migliorata gestione dei permessi",
+      "Ottimizzato sistema di notifiche",
+      "Aggiunto supporto per notifiche in background",
+    ],
+  },
+  {
     version: "0.9",
     changes: [
       "Migliorata visualizzazione prenotazioni",

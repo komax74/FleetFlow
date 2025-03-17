@@ -32,5 +32,6 @@ core
 # Sensitive files
 .env
 src/lib/supabase.ts
+src/lib/emailService.ts
 scripts/create-admin.ts
 supabase/migrations/

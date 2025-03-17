@@ -30,6 +30,7 @@ import { useToast } from "../ui/use-toast";
 import { Booking } from "@/types/bookings";
 import { Vehicle } from "@/types/vehicles";
 import Header from "./Header";
+import { createBooking } from "@/lib/bookings";
 
 interface BookingCalendarProps {
   selectedVehicle?: string;
@@ -237,12 +238,6 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
 
     onDateSelect(fixedStartDate);
     onDatesChange(dates);
-
-    // Log the selected dates for debugging
-    console.log("Selected date range:", {
-      startDate: fixedStartDate.toLocaleDateString(),
-      endDate: fixedEndDate.toLocaleDateString(),
-    });
   };
 
   const getDatesInRange = (start: Date, end: Date) => {
@@ -337,12 +332,22 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     const dayBookings = getBookingsForDay(day);
     const isInMaintenance = !!maintenanceReason;
 
+    // Calculate dynamic height based on number of bookings
+    const bookingsCount = dayBookings.length;
+    const minHeight = 40; // Base height
+    const heightPerBooking = 5; // Additional height per booking
+    const dynamicHeight = Math.max(
+      minHeight,
+      minHeight + bookingsCount * heightPerBooking,
+    );
+
     return (
       <div
         className={`relative ${isFullyBooked || isInMaintenance ? "cursor-not-allowed" : "cursor-pointer"}`}
         style={{
           height: "100%",
           width: "100%",
+          minHeight: `${dynamicHeight}px`,
         }}
         onClick={() => {
           if (isInMaintenance) {
@@ -529,6 +534,9 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                       // Add these props to improve hover effect
                       showSelectionPreview={true}
                       moveRangeOnFirstSelection={false}
+                      // Increase calendar height to prevent cutting off last row
+                      calendarClassName="custom-calendar-height"
+                      fixedHeight={true}
                     />
                   </div>
                   {!selectedVehicle && (
@@ -978,80 +986,119 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                                 user_id: user.id,
                                 start_date,
                                 end_date,
-                                pickup_time: `${pickupTime}:00`,
-                                return_time: `${returnTime}:00`,
-                                status: "active",
+                                // Ensure time format is correct for PostgreSQL time type
+                                pickup_time: pickupTime.includes(":")
+                                  ? pickupTime
+                                  : `${pickupTime}:00`,
+                                return_time: returnTime.includes(":")
+                                  ? returnTime
+                                  : `${returnTime}:00`,
                               };
 
-                              const { data, error } = await supabase
-                                .from("bookings")
-                                .insert([bookingData])
-                                .select();
-
-                              if (error) throw error;
-
-                              // Invia notifica agli amministratori
                               try {
-                                // Trova tutti gli admin
-                                const { data: admins } = await supabase
-                                  .from("profiles")
-                                  .select("id")
-                                  .eq("role", "admin");
+                                // Ensure time format is correct for PostgreSQL time type
+                                const formattedBookingData = {
+                                  ...bookingData,
+                                  pickup_time: bookingData.pickup_time.includes(
+                                    ":",
+                                  )
+                                    ? bookingData.pickup_time
+                                    : `${bookingData.pickup_time}:00`,
+                                  return_time: bookingData.return_time.includes(
+                                    ":",
+                                  )
+                                    ? bookingData.return_time
+                                    : `${bookingData.return_time}:00`,
+                                };
 
-                                if (admins && admins.length > 0) {
-                                  // Ottieni i dettagli del veicolo e dell'utente per la notifica
-                                  const vehicle = vehicles.find(
-                                    (v) => v.id === selectedVehicle,
+                                // Use the simplified createBooking function that avoids all triggers
+                                const result =
+                                  await createBooking(formattedBookingData);
+                                if (!result) {
+                                  throw new Error(
+                                    "Nessun dato restituito dalla funzione createBooking",
                                   );
-                                  const { data: userData } = await supabase
-                                    .from("profiles")
-                                    .select("*")
-                                    .eq("id", user.id)
-                                    .single();
-
-                                  // Crea il messaggio di notifica con date in formato italiano
-                                  const startDateFormatted = `${String(localStartDate.getDate()).padStart(2, "0")}/${String(localStartDate.getMonth() + 1).padStart(2, "0")}/${localStartDate.getFullYear()}`;
-                                  const endDateFormatted = `${String(localEndDate.getDate()).padStart(2, "0")}/${String(localEndDate.getMonth() + 1).padStart(2, "0")}/${localEndDate.getFullYear()}`;
-
-                                  const notificationMessage = `Nuova prenotazione: ${userData?.full_name} ha prenotato ${vehicle?.brand} ${vehicle?.model} (${vehicle?.license_plate}) dal ${startDateFormatted} al ${endDateFormatted}, dalle ${pickupTime}:00 alle ${returnTime}:00.`;
-
-                                  // Invia notifica a ciascun admin
-                                  for (const admin of admins) {
-                                    await supabase
-                                      .from("notifications")
-                                      .insert([
-                                        {
-                                          user_id: admin.id,
-                                          title: "Nuova prenotazione veicolo",
-                                          message: notificationMessage,
-                                          type: "booking",
-                                          read: false,
-                                          created_at: new Date().toISOString(),
-                                          action_url: "/booking-history",
-                                        },
-                                      ]);
-                                  }
                                 }
-                              } catch (notificationError) {
+
+                                toast({
+                                  title: "Prenotazione Confermata",
+                                  description:
+                                    "Veicolo prenotato con successo! Puoi visualizzare i dettagli nella sezione 'Le mie prenotazioni'.",
+                                  variant: "success",
+                                });
+
+                                // Chiudi il dialog di conferma
+                                setConfirmBookingDialog({
+                                  ...confirmBookingDialog,
+                                  open: false,
+                                });
+
+                                // Mostra un messaggio di conferma più visibile
+                                const successMessage =
+                                  document.createElement("div");
+                                successMessage.className =
+                                  "fixed inset-0 flex items-center justify-center z-50 bg-black/30 backdrop-blur-sm";
+                                successMessage.innerHTML = `
+                                  <div class="bg-white rounded-xl shadow-xl p-6 max-w-md w-full text-center animate-in fade-in zoom-in duration-300">
+                                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-600">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                      </svg>
+                                    </div>
+                                    <h3 class="text-xl font-bold mb-2">Prenotazione Confermata!</h3>
+                                    <p class="text-gray-600 mb-6">Il veicolo ${confirmBookingDialog.vehicle?.brand} ${confirmBookingDialog.vehicle?.model} è stato prenotato con successo.</p>
+                                    <div class="bg-gray-50 p-4 rounded-lg mb-6">
+                                      <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                          <p class="text-sm font-medium text-gray-500">Ritiro:</p>
+                                          <p class="font-medium">${confirmBookingDialog.startDate?.toLocaleDateString()} alle ore ${confirmBookingDialog.pickupTime}:00</p>
+                                        </div>
+                                        <div>
+                                          <p class="text-sm font-medium text-gray-500">Riconsegna:</p>
+                                          <p class="font-medium">${confirmBookingDialog.endDate?.toLocaleDateString()} alle ore ${confirmBookingDialog.returnTime}:00</p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <button class="bg-black hover:bg-gray-800 text-white font-medium py-2 px-6 rounded-full">Chiudi</button>
+                                  </div>
+                                `;
+                                document.body.appendChild(successMessage);
+
+                                // Aggiungi event listener al pulsante di chiusura
+                                const closeButton =
+                                  successMessage.querySelector("button");
+                                if (closeButton) {
+                                  closeButton.addEventListener("click", () => {
+                                    document.body.removeChild(successMessage);
+                                  });
+                                }
+
+                                // Rimuovi automaticamente dopo 5 secondi
+                                setTimeout(() => {
+                                  if (document.body.contains(successMessage)) {
+                                    document.body.removeChild(successMessage);
+                                  }
+                                }, 5000);
+
+                                return;
+                              } catch (error) {
                                 console.error(
-                                  "Error sending notification:",
-                                  notificationError,
+                                  "Errore durante la creazione della prenotazione:",
+                                  error,
                                 );
-                                // Non blocchiamo il flusso se la notifica fallisce
+                                throw error;
                               }
-
-                              toast({
-                                title: "Successo",
-                                description: "Veicolo prenotato con successo",
-                              });
-
-                              window.location.href = "/";
                             } catch (error) {
                               console.error("Error creating booking:", error);
+                              console.error(
+                                "Dettagli errore completo:",
+                                JSON.stringify(error, null, 2),
+                              );
                               toast({
                                 title: "Errore",
                                 description:
-                                  "Impossibile creare la prenotazione",
+                                  "Impossibile creare la prenotazione. Controlla la console per i dettagli.",
                                 variant: "destructive",
                               });
                             } finally {

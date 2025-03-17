@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import {
+  sendNotification,
+  sendNotificationToAdmins,
+  sendEmailNotification,
+} from "@/lib/notificationService";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,7 +65,7 @@ const SendNotifications = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const sendNotification = async () => {
+  const handleSendNotification = async () => {
     if (!formData.title || !formData.message) {
       toast({
         title: "Errore",
@@ -78,35 +83,99 @@ const SendNotifications = () => {
         title: formData.title,
         message: formData.message,
         type: formData.type,
-        read: false,
-        created_at: new Date().toISOString(),
         action_url: formData.action_url || null,
       };
 
-      const { error } = await supabase
-        .from("notifications")
-        .insert([notification]);
+      // Invia la notifica usando il database Supabase direttamente
+      let success;
+      try {
+        const { error } = await supabase.from("notifications").insert([
+          {
+            ...notification,
+            read: false,
+            created_at: new Date().toISOString(),
+          },
+        ]);
 
-      if (error) throw error;
+        if (error) throw error;
+        success = true;
 
-      toast({
-        title: "Successo",
-        description: "Notifica inviata con successo",
-      });
+        // Log per debug
+        console.log("Notifica salvata con successo nel database", notification);
 
-      // Reset form
-      setFormData({
-        title: "",
-        message: "",
-        type: "system",
-        recipient: "all",
-        action_url: "",
-      });
+        // Tenta di inviare anche una notifica nativa del browser
+        // Questo funzionerà solo se l'utente ha concesso i permessi
+        if (
+          formData.recipient !== "all" &&
+          Notification.permission === "granted"
+        ) {
+          try {
+            // Ottieni i dettagli dell'utente per personalizzare la notifica
+            const { data: userData } = await supabase
+              .from("profiles")
+              .select("full_name")
+              .eq("id", formData.recipient)
+              .single();
+
+            const recipientName = userData?.full_name || "utente";
+
+            // Invia una notifica nativa del browser
+            const browserNotification = new Notification(formData.title, {
+              body: formData.message,
+              icon: "/vite.svg",
+              tag: `notification-${Date.now()}`, // Assicura che ogni notifica sia unica
+            });
+
+            // Aggiungi un handler per il click sulla notifica
+            browserNotification.onclick = () => {
+              window.focus();
+              if (formData.action_url) {
+                window.location.href = formData.action_url;
+              }
+              browserNotification.close();
+            };
+
+            console.log(`Notifica browser inviata a ${recipientName}`);
+          } catch (browserNotificationError) {
+            console.error(
+              "Errore nell'invio della notifica browser:",
+              browserNotificationError,
+            );
+            // Non blocchiamo il flusso se la notifica browser fallisce
+          }
+        }
+      } catch (dbError) {
+        console.error(
+          "Errore durante il salvataggio della notifica nel database:",
+          dbError,
+        );
+        throw dbError;
+      }
+
+      if (success) {
+        toast({
+          title: "Successo",
+          description: "Notifica inviata con successo",
+        });
+
+        // Reset form
+        setFormData({
+          title: "",
+          message: "",
+          type: "system",
+          recipient: "all",
+          action_url: "",
+        });
+      } else {
+        throw new Error("Errore durante l'invio della notifica");
+      }
     } catch (error) {
       console.error("Error sending notification:", error);
       toast({
         title: "Errore",
-        description: "Impossibile inviare la notifica: " + error.message,
+        description:
+          "Impossibile inviare la notifica: " +
+          (error.message || "Errore sconosciuto"),
         variant: "destructive",
       });
     } finally {
@@ -232,7 +301,7 @@ const SendNotifications = () => {
 
                 <div className="pt-2">
                   <Button
-                    onClick={sendNotification}
+                    onClick={handleSendNotification}
                     disabled={loading}
                     className="bg-black hover:bg-gray-800 text-white"
                   >

@@ -77,3 +77,54 @@
     padding: 0;
   }
 }
+
+/* Fix per l'altezza del calendario DateRange */
+.custom-calendar-height .rdrMonth {
+  min-height: 340px;
+}
+
+.custom-calendar-height .rdrDays {
+  min-height: 290px;
+}
+
+.custom-calendar-height .rdrWeekDays {
+  min-height: 20px;
+}
+
+.custom-calendar-height .rdrMonthAndYearWrapper {
+  min-height: 30px;
+}
+
+/* Assicura che le celle del calendario abbiano altezza sufficiente */
+.custom-calendar-height .rdrDay {
+  min-height: 40px;
+}
+
+/* Aumenta l'altezza del contenitore principale del calendario */
+.custom-calendar-height {
+  min-height: 400px;
+}
+
+/* Assicura che l'ultima riga del calendario non venga tagliata */
+.custom-calendar-height .rdrMonth .rdrDays .rdrWeek:last-child {
+  min-height: 50px;
+  padding-bottom: 5px;
+}
+
+/* Aumenta lo spazio per le righe del calendario */
+.custom-calendar-height .rdrMonth .rdrDays .rdrWeek {
+  min-height: 50px;
+}
+
+/* Fix per il div specifico che necessita di 800px di altezza */
+#root
+  > div
+  > div
+  > div
+  > div
+  > div
+  > div.flex-1.px-6.pb-6.tempo-d9bd6a46-2804-5951-b6e7-4a07a16eda6c
+  > div
+  > div {
+  height: 800px !important;
+}

@@ -155,40 +155,66 @@ const MyBookings = () => {
       if (error) throw error;
 
       // Invia notifica all'utente
-      await supabase.from("notifications").insert([
-        {
-          user_id: booking.user_id,
-          title: "Prenotazione annullata",
-          message: `La tua prenotazione per ${booking.vehicles?.brand} ${booking.vehicles?.model} (${booking.vehicles?.license_plate}) è stata annullata con successo.`,
-          type: "booking",
-          read: false,
-          created_at: new Date().toISOString(),
-        },
-      ]);
+      const { error: userNotificationError } = await supabase
+        .from("notifications")
+        .insert([
+          {
+            user_id: booking.user_id,
+            title: "Prenotazione annullata",
+            message: `La tua prenotazione per ${booking.vehicles?.brand} ${booking.vehicles?.model} (${booking.vehicles?.license_plate}) è stata annullata con successo.`,
+            type: "booking",
+            read: false,
+            created_at: new Date().toISOString(),
+          },
+        ]);
+
+      if (userNotificationError) {
+        console.error(
+          "Errore nell'invio della notifica all'utente:",
+          userNotificationError,
+        );
+      } else {
+        console.log("Notifica inviata con successo all'utente");
+      }
 
       // Invia notifica agli amministratori
-      const { data: admins } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("role", "admin");
+      try {
+        const { data: admins } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("role", "admin");
 
-      if (admins && admins.length > 0) {
-        for (const admin of admins) {
-          if (admin.id !== booking.user_id) {
-            // Non inviare all'admin se è lo stesso utente
-            await supabase.from("notifications").insert([
-              {
-                user_id: admin.id,
-                title: "Prenotazione annullata da un utente",
-                message: `${booking.profiles?.full_name} ha annullato la prenotazione per ${booking.vehicles?.brand} ${booking.vehicles?.model} (${booking.vehicles?.license_plate}).`,
-                type: "booking",
-                read: false,
-                created_at: new Date().toISOString(),
-                action_url: "/booking-history",
-              },
-            ]);
+        if (admins && admins.length > 0) {
+          // Crea un array di notifiche per tutti gli admin (escluso l'utente stesso se è admin)
+          const adminNotifications = admins
+            .filter((admin) => admin.id !== booking.user_id)
+            .map((admin) => ({
+              user_id: admin.id,
+              title: "Prenotazione annullata da un utente",
+              message: `${booking.profiles?.full_name} ha annullato la prenotazione per ${booking.vehicles?.brand} ${booking.vehicles?.model} (${booking.vehicles?.license_plate}).`,
+              type: "booking",
+              read: false,
+              created_at: new Date().toISOString(),
+              action_url: "/booking-history",
+            }));
+
+          if (adminNotifications.length > 0) {
+            const { error: adminNotificationError } = await supabase
+              .from("notifications")
+              .insert(adminNotifications);
+
+            if (adminNotificationError) {
+              console.error(
+                "Errore nell'invio delle notifiche agli admin:",
+                adminNotificationError,
+              );
+            } else {
+              console.log("Notifiche inviate con successo agli admin");
+            }
           }
         }
+      } catch (error) {
+        console.error("Errore nel recupero degli admin:", error);
       }
 
       toast({

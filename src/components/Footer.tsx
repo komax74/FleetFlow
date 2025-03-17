@@ -13,14 +13,13 @@ const Footer = () => {
         const storedFooterText = localStorage.getItem("footer_text");
         if (storedFooterText) {
           setFooterText(storedFooterText);
-          return;
         }
 
-        // If not in localStorage, try from Supabase if available
+        // Also try from Supabase if available
         try {
           const { data, error } = await supabase
             .from("settings")
-            .select("value")
+            .select("*")
             .eq("key", "footer_text")
             .single();
 
@@ -34,11 +33,10 @@ const Footer = () => {
           }
         } catch (dbError) {
           // Silently fail if database table doesn't exist yet
-          console.log("Using default footer text");
+          console.log("Database table not available yet");
         }
       } catch (error) {
         console.error("Error fetching footer text:", error);
-        // If there's an error, we'll just use the default text
       }
     };
 
@@ -46,11 +44,28 @@ const Footer = () => {
   }, []);
 
   return (
-    <footer className="py-3 px-6 text-center text-xs text-gray-500 border-t mt-auto">
-      <div
-        className="max-w-[1400px] mx-auto"
-        dangerouslySetInnerHTML={{ __html: footerText }}
-      />
+    <footer className="py-6 border-t">
+      <div className="container mx-auto px-6">
+        <div className="flex flex-col md:flex-row justify-between items-center">
+          <div className="mb-4 md:mb-0">
+            <div className="flex items-center">
+              <img
+                src="/images/logo/ncg-logo-color.png"
+                alt="NCG Logo"
+                className="h-8 mr-3"
+              />
+              <span className="text-lg font-semibold">FleetFlow</span>
+            </div>
+          </div>
+
+          <div className="text-center md:text-right">
+            <div
+              className="text-sm text-gray-600"
+              dangerouslySetInnerHTML={{ __html: footerText }}
+            />
+          </div>
+        </div>
+      </div>
     </footer>
   );
 };

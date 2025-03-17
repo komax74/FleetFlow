@@ -85,14 +85,29 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function signOut() {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      // Clear local storage first to ensure we don't have stale data
+      localStorage.removeItem("sb-wxhavjosbvfymltejqqa-auth-token");
+      localStorage.removeItem("supabase.auth.token");
+
+      // Then try the official signOut method
+      try {
+        const { error } = await supabase.auth.signOut();
+        if (error) console.warn("Supabase signOut error:", error);
+      } catch (signOutError) {
+        console.warn("Caught signOut error:", signOutError);
+        // Continue with manual cleanup even if signOut fails
+      }
+
+      // Reset state regardless of signOut success
       setUser(null);
       setProfile(null);
+
+      // Force reload to clear any remaining state
       window.location.href = "/";
     } catch (error) {
       console.error("Sign out error:", error);
-      throw error;
+      // Force reload as a last resort
+      window.location.href = "/";
     }
   }
 

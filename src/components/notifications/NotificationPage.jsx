@@ -65,25 +65,14 @@ const NotificationPage = () => {
 
     fetchNotifications();
 
-    // Set up subscription for real-time updates if available
-    try {
-      const subscription = supabase
-        .channel("notifications_channel")
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "notifications" },
-          (payload) => {
-            fetchNotifications();
-          },
-        )
-        .subscribe();
+    // Set up polling instead of realtime subscription
+    const pollingInterval = setInterval(() => {
+      fetchNotifications();
+    }, 10000); // Poll every 10 seconds
 
-      return () => {
-        subscription.unsubscribe();
-      };
-    } catch (error) {
-      console.log("Real-time updates not available");
-    }
+    return () => {
+      clearInterval(pollingInterval);
+    };
   }, [user]);
 
   const markAsRead = async (notificationId) => {

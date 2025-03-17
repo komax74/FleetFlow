@@ -39,11 +39,16 @@ export const NotificationSystem = () => {
       `notifications_${user.id}`,
     );
     if (storedNotifications) {
-      const parsedNotifications = JSON.parse(storedNotifications);
-      setNotifications(parsedNotifications);
-      setUnreadCount(
-        parsedNotifications.filter((n: Notification) => !n.read).length,
-      );
+      try {
+        const parsedNotifications = JSON.parse(storedNotifications);
+        setNotifications(parsedNotifications);
+        setUnreadCount(
+          parsedNotifications.filter((n: Notification) => !n.read).length,
+        );
+      } catch (e) {
+        console.error("Error parsing notifications from localStorage:", e);
+        localStorage.removeItem(`notifications_${user.id}`);
+      }
     }
 
     // Try to fetch from database if available
@@ -66,15 +71,58 @@ export const NotificationSystem = () => {
           );
         }
       } catch (error) {
-        console.log("Using local notifications only");
+        console.error("Error fetching notifications:", error);
       }
     };
 
     fetchNotifications();
 
+    // Handle localStorage changes from other tabs/components
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === `notifications_${user.id}` && e.newValue) {
+        try {
+          const parsedNotifications = JSON.parse(e.newValue);
+          setNotifications(parsedNotifications);
+          setUnreadCount(
+            parsedNotifications.filter((n: Notification) => !n.read).length,
+          );
+        } catch (error) {
+          console.error(
+            "Error parsing notifications from storage event:",
+            error,
+          );
+        }
+      }
+    };
+
+    // Also listen for custom storage events dispatched within the same window
+    const handleCustomStorageEvent = () => {
+      const storedNotifications = localStorage.getItem(
+        `notifications_${user.id}`,
+      );
+      if (storedNotifications) {
+        try {
+          const parsedNotifications = JSON.parse(storedNotifications);
+          setNotifications(parsedNotifications);
+          setUnreadCount(
+            parsedNotifications.filter((n: Notification) => !n.read).length,
+          );
+        } catch (error) {
+          console.error(
+            "Error parsing notifications from custom event:",
+            error,
+          );
+        }
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("storage", handleCustomStorageEvent);
+
     // Set up subscription for real-time updates if available
+    let subscription;
     try {
-      const subscription = supabase
+      subscription = supabase
         .channel("notifications_channel")
         .on(
           "postgres_changes",
@@ -84,13 +132,15 @@ export const NotificationSystem = () => {
           },
         )
         .subscribe();
-
-      return () => {
-        subscription.unsubscribe();
-      };
     } catch (error) {
-      console.log("Real-time updates not available");
+      console.error("Real-time updates not available:", error);
     }
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("storage", handleCustomStorageEvent);
+      if (subscription) subscription.unsubscribe();
+    };
   }, [user]);
 
   const markAsRead = async (notificationId: string) => {
@@ -113,7 +163,7 @@ export const NotificationSystem = () => {
         .update({ read: true })
         .eq("id", notificationId);
     } catch (error) {
-      console.log("Updated notification locally only");
+      // Error handled silently
     }
   };
 
@@ -138,7 +188,7 @@ export const NotificationSystem = () => {
         .update({ read: true })
         .or(`user_id.eq.${user.id},user_id.is.null`);
     } catch (error) {
-      console.log("Updated notifications locally only");
+      // Error handled silently
     }
   };
 

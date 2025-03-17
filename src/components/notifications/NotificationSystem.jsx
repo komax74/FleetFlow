@@ -28,9 +28,15 @@ const NotificationSystem = () => {
       `notifications_${user.id}`,
     );
     if (storedNotifications) {
-      const parsedNotifications = JSON.parse(storedNotifications);
-      setNotifications(parsedNotifications);
-      setUnreadCount(parsedNotifications.filter((n) => !n.read).length);
+      try {
+        const parsedNotifications = JSON.parse(storedNotifications);
+        setNotifications(parsedNotifications);
+        setUnreadCount(parsedNotifications.filter((n) => !n.read).length);
+      } catch (parseError) {
+        console.error("Error parsing stored notifications:", parseError);
+        // If there's an error parsing, clear the corrupted data
+        localStorage.removeItem(`notifications_${user.id}`);
+      }
     }
 
     // Try to fetch from database if available
@@ -47,37 +53,34 @@ const NotificationSystem = () => {
         if (data) {
           setNotifications(data);
           setUnreadCount(data.filter((n) => !n.read).length);
-          localStorage.setItem(
-            `notifications_${user.id}`,
-            JSON.stringify(data),
-          );
+          try {
+            localStorage.setItem(
+              `notifications_${user.id}`,
+              JSON.stringify(data),
+            );
+          } catch (storageError) {
+            console.error(
+              "Error storing notifications in localStorage:",
+              storageError,
+            );
+          }
         }
       } catch (error) {
-        console.log("Using local notifications only");
+        console.log("Using local notifications only:", error.message);
       }
     };
 
+    // Initial fetch
     fetchNotifications();
 
-    // Set up subscription for real-time updates if available
-    try {
-      const subscription = supabase
-        .channel("notifications_channel")
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "notifications" },
-          (payload) => {
-            fetchNotifications();
-          },
-        )
-        .subscribe();
+    // Set up polling instead of realtime subscription
+    const pollingInterval = setInterval(() => {
+      fetchNotifications();
+    }, 10000); // Poll every 10 seconds
 
-      return () => {
-        subscription.unsubscribe();
-      };
-    } catch (error) {
-      console.log("Real-time updates not available");
-    }
+    return () => {
+      clearInterval(pollingInterval);
+    };
   }, [user]);
 
   const markAsRead = async (notificationId) => {
@@ -207,62 +210,65 @@ const NotificationSystem = () => {
             </Button>
           </div>
         ) : (
-          <div className="max-h-[300px] overflow-y-auto">
-            {notifications.slice(0, 5).map((notification) => (
+          <div>
+            <div className="max-h-[300px] overflow-y-auto">
+              {notifications.slice(0, 5).map((notification) => (
+                <DropdownMenuItem
+                  key={notification.id}
+                  className={`flex flex-col items-start p-3 cursor-pointer ${!notification.read ? "bg-blue-50" : ""}`}
+                  onClick={() => handleNotificationClick(notification)}
+                >
+                  <div className="flex w-full">
+                    <div className="mr-2 text-lg">
+                      {getNotificationIcon(notification.type)}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">
+                        {notification.title}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1 line-clamp-2 overflow-hidden max-h-8">
+                        {notification.message
+                          .replace(/<[^>]*>/g, "")
+                          .substring(0, 100)}
+                        ...
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1">
+                        {format(
+                          new Date(notification.created_at),
+                          "dd MMM, HH:mm",
+                          { locale: it },
+                        )}
+                      </div>
+                    </div>
+                    {!notification.read && (
+                      <div className="h-2 w-2 bg-blue-500 rounded-full self-start mt-1"></div>
+                    )}
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </div>
+            <div className="sticky bottom-0 bg-white border-t py-2">
               <DropdownMenuItem
-                key={notification.id}
-                className={`flex flex-col items-start p-3 cursor-pointer ${!notification.read ? "bg-blue-50" : ""}`}
-                onClick={() => handleNotificationClick(notification)}
+                className="w-full text-center text-sm text-blue-500 hover:text-blue-700 flex items-center justify-center gap-2"
+                onClick={() => (window.location.href = "/notifications")}
               >
-                <div className="flex w-full">
-                  <div className="mr-2 text-lg">
-                    {getNotificationIcon(notification.type)}
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">
-                      {notification.title}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1 line-clamp-2 overflow-hidden max-h-8">
-                      {notification.message
-                        .replace(/<[^>]*>/g, "")
-                        .substring(0, 100)}
-                      ...
-                    </div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      {format(
-                        new Date(notification.created_at),
-                        "dd MMM, HH:mm",
-                        { locale: it },
-                      )}
-                    </div>
-                  </div>
-                  {!notification.read && (
-                    <div className="h-2 w-2 bg-blue-500 rounded-full self-start mt-1"></div>
-                  )}
-                </div>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect width="20" height="16" x="2" y="4" rx="2" />
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                </svg>
+                Visualizza tutte le notifiche
               </DropdownMenuItem>
-            ))}
-
-            <DropdownMenuItem
-              className="w-full text-center text-sm text-blue-500 hover:text-blue-700 flex items-center justify-center gap-2"
-              onClick={() => (window.location.href = "/notifications")}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect width="20" height="16" x="2" y="4" rx="2" />
-                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-              </svg>
-              Visualizza tutte le notifiche
-            </DropdownMenuItem>
+            </div>
           </div>
         )}
       </DropdownMenuContent>

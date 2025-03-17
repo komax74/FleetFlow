@@ -9,6 +9,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useToast } from "../ui/use-toast";
 import { supabase } from "@/lib/supabase";
 import Header from "./Header";
+import { Switch } from "../ui/switch";
+import { requestNotificationPermission } from "@/lib/firebase";
 
 const AccountSettings = () => {
   const { user, profile } = useAuth();
@@ -20,6 +22,7 @@ const AccountSettings = () => {
     company: "",
   });
   const [hasChanges, setHasChanges] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -29,6 +32,11 @@ const AccountSettings = () => {
         company: profile.company || "",
       });
       setHasChanges(false);
+    }
+
+    // Controlla se le notifiche sono abilitate
+    if ("Notification" in window) {
+      setNotificationsEnabled(Notification.permission === "granted");
     }
   }, [profile]);
 
@@ -130,6 +138,158 @@ const AccountSettings = () => {
     }
   };
 
+  const handleNotificationToggle = async () => {
+    if (!notificationsEnabled) {
+      try {
+        // Rimuoviamo il flag di notifiche ignorate
+        localStorage.removeItem("notifications_ignored");
+
+        // Verifica il browser e il sistema operativo
+        const isSafari = /^((?!chrome|android).)*safari/i.test(
+          navigator.userAgent,
+        );
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+        if (isSafari && isMobile) {
+          // Safari su iOS richiede un approccio diverso
+          toast({
+            title: "Safari Mobile rilevato",
+            description:
+              "Su Safari iOS, vai in Impostazioni > Safari > Notifiche per abilitare le notifiche per questo sito.",
+          });
+          // Impostiamo comunque lo stato come attivato per l'interfaccia
+          setNotificationsEnabled(true);
+          return;
+        }
+
+        // Richiedi il permesso per le notifiche
+        const permission = await Notification.requestPermission();
+
+        if (permission === "granted") {
+          // Richiedi il token FCM (ora sempre simulato)
+          const token = await requestNotificationPermission();
+          setNotificationsEnabled(true);
+
+          toast({
+            title: "Notifiche push attivate",
+            description:
+              "Riceverai notifiche push per gli aggiornamenti importanti",
+          });
+
+          // Invia una notifica di test
+          if (user) {
+            try {
+              await supabase.from("notifications").insert([
+                {
+                  user_id: user.id,
+                  title: "Notifiche push attivate con successo",
+                  message:
+                    "Ora riceverai notifiche push per gli aggiornamenti importanti della piattaforma.",
+                  type: "system",
+                  read: false,
+                  created_at: new Date().toISOString(),
+                },
+              ]);
+
+              // Invia una notifica nativa del browser come test
+              try {
+                const testNotification = new Notification(
+                  "Notifiche attivate",
+                  {
+                    body: "Le notifiche push sono state attivate con successo",
+                    icon: "/vite.svg",
+                  },
+                );
+
+                // Aggiungi un handler per il click sulla notifica
+                testNotification.onclick = () => {
+                  window.focus();
+                  testNotification.close();
+                };
+
+                console.log("Notifica di test inviata con successo");
+              } catch (notificationError) {
+                console.error(
+                  "Errore nell'invio della notifica di test del browser:",
+                  notificationError,
+                );
+              }
+            } catch (error) {
+              console.error(
+                "Errore nell'invio della notifica di test al database:",
+                error,
+              );
+            }
+          }
+        } else if (permission === "denied") {
+          setNotificationsEnabled(false);
+          toast({
+            title: "Notifiche push bloccate",
+            description:
+              "Non riceverai notifiche push. Puoi modificare questa impostazione nelle preferenze del browser.",
+            variant: "destructive",
+          });
+        } else {
+          // Se l'utente ha cliccato "Non ora", non cambiamo lo stato
+          toast({
+            title: "Richiesta ignorata",
+            description:
+              "Puoi attivare le notifiche push in qualsiasi momento.",
+          });
+        }
+      } catch (error) {
+        console.error(
+          "Errore durante l'attivazione delle notifiche push:",
+          error,
+        );
+        toast({
+          title: "Errore",
+          description:
+            "Si è verificato un errore durante l'attivazione delle notifiche push",
+          variant: "destructive",
+        });
+      }
+    } else {
+      // Se l'utente tenta di disattivare le notifiche già attive
+      try {
+        // Non possiamo revocare il permesso, ma possiamo rimuovere il token
+        localStorage.removeItem("fcmToken");
+
+        // Rimuovi il dispositivo dal database se possibile
+        if (user) {
+          try {
+            const fcmToken = localStorage.getItem("fcmToken");
+            if (fcmToken) {
+              await supabase
+                .from("user_devices")
+                .delete()
+                .eq("token", fcmToken);
+            }
+          } catch (dbError) {
+            console.error("Errore nella rimozione del dispositivo:", dbError);
+          }
+        }
+
+        setNotificationsEnabled(false);
+        toast({
+          title: "Notifiche push disattivate",
+          description:
+            "Le notifiche push sono state disattivate per questo dispositivo.",
+        });
+      } catch (error) {
+        console.error(
+          "Errore durante la disattivazione delle notifiche:",
+          error,
+        );
+        toast({
+          title: "Informazione",
+          description:
+            "Per disattivare completamente le notifiche push, modifica le impostazioni del browser",
+        });
+      }
+    }
+  };
+
   if (!user || !profile) return null;
 
   return (
@@ -188,6 +348,37 @@ const AccountSettings = () => {
                       {profile.role === "admin" ? "Amministratore" : "Utente"}
                     </p>
                   </div>
+                </div>
+              </div>
+
+              {/* Notification Settings */}
+              <div className="space-y-2">
+                <Label>Notifiche</Label>
+                <div className="flex items-center justify-between mt-2 p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="font-medium">Notifiche Push</p>
+                    <p className="text-sm text-gray-500">
+                      Ricevi notifiche push per prenotazioni e aggiornamenti
+                      direttamente sul tuo dispositivo
+                    </p>
+                  </div>
+                  <Switch
+                    checked={notificationsEnabled}
+                    onCheckedChange={handleNotificationToggle}
+                  />
+                </div>
+                {!notificationsEnabled && (
+                  <p className="text-sm text-blue-600 mt-1">
+                    Attiva le notifiche push per ricevere aggiornamenti
+                    importanti sul tuo dispositivo
+                  </p>
+                )}
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                  <p className="text-sm text-blue-700">
+                    <strong>Nota:</strong> Le notifiche in-app e via email sono
+                    sempre attive e non possono essere disattivate. Le notifiche
+                    push sono opzionali e richiedono il tuo consenso esplicito.
+                  </p>
                 </div>
               </div>
 
