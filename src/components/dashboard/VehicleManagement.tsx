@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Plus, Settings, Wrench, X } from "lucide-react";
+import { MapPin, Plus, Settings, Wrench, X } from "lucide-react";
 import { ImageUpload } from "../ui/image-upload";
 import { DateRange } from "react-date-range";
 import "react-date-range/dist/styles.css";
@@ -27,18 +27,30 @@ const VehicleManagement = () => {
   const [vehicles, setVehicles] = React.useState<Vehicle[]>([]);
 
   React.useEffect(() => {
-    const fetchVehicles = async () => {
+    const fetchData = async () => {
       try {
-        const { data, error } = await supabase.from("vehicles").select("*");
+        // Fetch vehicles
+        const { data: vehiclesData, error: vehiclesError } = await supabase
+          .from("vehicles")
+          .select("*");
 
-        if (error) throw error;
-        setVehicles(data || []);
+        if (vehiclesError) throw vehiclesError;
+        setVehicles(vehiclesData || []);
+
+        // Fetch locations for dropdown
+        const { data: locationsData, error: locationsError } = await supabase
+          .from("locations")
+          .select("*")
+          .order("name", { ascending: true });
+
+        if (locationsError) throw locationsError;
+        setLocations(locationsData || []);
       } catch (error) {
         // Error handled by error boundary
       }
     };
 
-    fetchVehicles();
+    fetchData();
   }, []);
 
   const [newVehicle, setNewVehicle] = React.useState({
@@ -62,6 +74,17 @@ const VehicleManagement = () => {
     },
     reason: "",
   });
+
+  const [locationVehicle, setLocationVehicle] = React.useState<Vehicle | null>(
+    null,
+  );
+  const [locationInfo, setLocationInfo] = React.useState({
+    location_lat: 0,
+    location_lng: 0,
+    last_location: "",
+    custom_location: true,
+  });
+  const [locations, setLocations] = React.useState<any[]>([]);
 
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
 
@@ -128,6 +151,47 @@ const VehicleManagement = () => {
     }
   };
 
+  const updateVehicleLocation = async () => {
+    if (!locationVehicle) return;
+
+    try {
+      const { error } = await supabase
+        .from("vehicles")
+        .update({
+          location_lat: locationInfo.location_lat,
+          location_lng: locationInfo.location_lng,
+          last_location: locationInfo.last_location,
+          custom_location: locationInfo.custom_location,
+        })
+        .eq("id", locationVehicle.id);
+
+      if (error) throw error;
+
+      const updatedVehicle = {
+        ...locationVehicle,
+        location_lat: locationInfo.location_lat,
+        location_lng: locationInfo.location_lng,
+        last_location: locationInfo.last_location,
+        custom_location: locationInfo.custom_location,
+      };
+
+      const updatedVehicles = vehicles.map((v) =>
+        v.id === locationVehicle.id ? updatedVehicle : v,
+      );
+
+      setVehicles(updatedVehicles);
+      setLocationVehicle(null);
+      setLocationInfo({
+        location_lat: 0,
+        location_lng: 0,
+        last_location: "",
+        custom_location: true,
+      });
+    } catch (error) {
+      // Error handled by error boundary
+    }
+  };
+
   const setMaintenance = async () => {
     if (!maintenanceVehicle || !maintenanceInfo.reason) return;
 
@@ -171,19 +235,37 @@ const VehicleManagement = () => {
     }
   };
 
-  const cancelMaintenance = (vehicle: Vehicle) => {
-    const updatedVehicle = {
-      ...vehicle,
-      status: "available" as const,
-      maintenanceInfo: undefined,
-    };
+  const cancelMaintenance = async (vehicle: Vehicle) => {
+    try {
+      const { error } = await supabase
+        .from("vehicles")
+        .update({
+          status: "available",
+          maintenance_start: null,
+          maintenance_end: null,
+          maintenance_reason: null,
+        })
+        .eq("id", vehicle.id);
 
-    const updatedVehicles = vehicles.map((v) =>
-      v.id === vehicle.id ? updatedVehicle : v,
-    );
+      if (error) throw error;
 
-    setVehicles(updatedVehicles);
-    localStorage.setItem("fleet_vehicles", JSON.stringify(updatedVehicles));
+      const updatedVehicle = {
+        ...vehicle,
+        status: "available" as const,
+        maintenance_start: null,
+        maintenance_end: null,
+        maintenance_reason: null,
+      };
+
+      const updatedVehicles = vehicles.map((v) =>
+        v.id === vehicle.id ? updatedVehicle : v,
+      );
+
+      setVehicles(updatedVehicles);
+    } catch (error) {
+      // Error handled by error boundary
+      console.error("Error cancelling maintenance:", error);
+    }
   };
 
   return (
@@ -476,6 +558,154 @@ const VehicleManagement = () => {
                             variant="ghost"
                             size="icon"
                             className="hover:bg-gray-50 rounded-full"
+                            onClick={() => {
+                              // Initialize location info with vehicle's current location data
+                              setLocationInfo({
+                                location_lat: vehicle.location_lat || 0,
+                                location_lng: vehicle.location_lng || 0,
+                                last_location: vehicle.last_location || "",
+                                custom_location:
+                                  vehicle.custom_location || true,
+                              });
+                            }}
+                          >
+                            <MapPin className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="rounded-[20px]">
+                          <DialogHeader>
+                            <DialogTitle>Posizione Veicolo</DialogTitle>
+                            <DialogDescription>
+                              Aggiorna la posizione del veicolo
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                              <Label htmlFor="location">Posizione</Label>
+                              <select
+                                id="location"
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                value={locationInfo.last_location}
+                                onChange={(e) => {
+                                  const selectedLocation = locations.find(
+                                    (loc) => loc.name === e.target.value,
+                                  );
+                                  if (selectedLocation) {
+                                    setLocationInfo({
+                                      ...locationInfo,
+                                      last_location: selectedLocation.name,
+                                      location_lat: selectedLocation.lat,
+                                      location_lng: selectedLocation.lng,
+                                      custom_location: false,
+                                    });
+                                  } else if (e.target.value === "custom") {
+                                    setLocationInfo({
+                                      ...locationInfo,
+                                      last_location: "Posizione personalizzata",
+                                      custom_location: true,
+                                      location_lat: 45.4642,
+                                      location_lng: 9.19,
+                                    });
+                                  } else if (e.target.value === "none") {
+                                    setLocationInfo({
+                                      ...locationInfo,
+                                      last_location: "Nessuna posizione",
+                                      location_lat: 0,
+                                      location_lng: 0,
+                                      custom_location: false,
+                                    });
+                                  } else {
+                                    setLocationInfo({
+                                      ...locationInfo,
+                                      last_location: e.target.value,
+                                    });
+                                  }
+                                }}
+                              >
+                                <option value="none">Nessuna posizione</option>
+                                <option value="custom">
+                                  Posizione personalizzata (GPS)
+                                </option>
+                                {locations.map((location) => (
+                                  <option
+                                    key={location.id}
+                                    value={location.name}
+                                  >
+                                    {location.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            {locationInfo.custom_location && (
+                              <>
+                                <div className="grid gap-2">
+                                  <Label htmlFor="lat">Latitudine</Label>
+                                  <Input
+                                    id="lat"
+                                    type="number"
+                                    step="0.000001"
+                                    value={locationInfo.location_lat}
+                                    onChange={(e) =>
+                                      setLocationInfo({
+                                        ...locationInfo,
+                                        location_lat:
+                                          parseFloat(e.target.value) || 0,
+                                      })
+                                    }
+                                    placeholder="es. 45.4642"
+                                  />
+                                </div>
+                                <div className="grid gap-2">
+                                  <Label htmlFor="lng">Longitudine</Label>
+                                  <Input
+                                    id="lng"
+                                    type="number"
+                                    step="0.000001"
+                                    value={locationInfo.location_lng}
+                                    onChange={(e) =>
+                                      setLocationInfo({
+                                        ...locationInfo,
+                                        location_lng:
+                                          parseFloat(e.target.value) || 0,
+                                      })
+                                    }
+                                    placeholder="es. 9.1900"
+                                  />
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              onClick={() => {
+                                setLocationVehicle(vehicle);
+                                updateVehicleLocation();
+                                const dialogTrigger =
+                                  document.querySelector('[role="dialog"]');
+                                if (dialogTrigger) {
+                                  const closeButton =
+                                    dialogTrigger.querySelector(
+                                      'button[aria-label="Close"]',
+                                    );
+                                  if (closeButton) {
+                                    closeButton.click();
+                                  }
+                                }
+                              }}
+                            >
+                              Salva Posizione
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="hover:bg-gray-50 rounded-full"
                           >
                             <Wrench className="h-4 w-4" />
                           </Button>
@@ -580,6 +810,12 @@ const VehicleManagement = () => {
                     <p className="text-sm text-gray-600">
                       Chilometraggio: {vehicle.mileage?.toLocaleString() || "0"}{" "}
                       km
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Posizione:{" "}
+                      {vehicle.location_lat && vehicle.location_lng
+                        ? vehicle.last_location || "Posizione GPS"
+                        : "Nessuna posizione"}
                     </p>
                     <div className="flex justify-between items-center">
                       <span

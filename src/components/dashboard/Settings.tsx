@@ -7,6 +7,7 @@ import { useToast } from "../ui/use-toast";
 import { supabase } from "@/lib/supabase";
 import Header from "./Header";
 import NotificationSettings from "./NotificationSettings.jsx";
+import LocationSettings from "./LocationSettings";
 
 const Settings = () => {
   const [footerText, setFooterText] = useState(
@@ -166,6 +167,8 @@ const Settings = () => {
               </div>
             </CardContent>
           </Card>
+
+          <LocationSettings />
 
           <NotificationSettings />
         </div>

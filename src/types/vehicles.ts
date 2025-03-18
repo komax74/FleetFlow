@@ -11,4 +11,8 @@ export interface Vehicle {
   maintenance_reason?: string;
   created_at?: string;
   updated_at?: string;
+  last_location?: string;
+  location_lat?: number;
+  location_lng?: number;
+  custom_location?: boolean;
 }

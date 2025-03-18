@@ -9,6 +9,7 @@ import BookingCalendar from "./components/dashboard/BookingCalendar";
 import MyBookings from "./components/dashboard/MyBookings";
 import BookingHistory from "./components/dashboard/BookingHistory";
 import Settings from "./components/dashboard/Settings";
+import MapboxMap from "./components/dashboard/MapboxMap";
 import LoginForm from "./components/auth/LoginForm";
 import RequireAdmin from "./components/auth/RequireAdmin";
 import Footer from "./components/Footer";
@@ -27,7 +28,7 @@ import {
 } from "./lib/firebase";
 import { useToast } from "./components/ui/use-toast";
 
-function AppRoutes() {
+function App() {
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -92,6 +93,7 @@ function AppRoutes() {
             <Route path="/book" element={<BookingCalendar />} />
             <Route path="/my-bookings" element={<MyBookings />} />
             <Route path="/booking-history" element={<BookingHistory />} />
+            <Route path="/map" element={<MapboxMap />} />
             <Route path="/notifications" element={<NotificationPage />} />
             <Route path="/notifications/send" element={<SendNotifications />} />
             <Route
@@ -146,10 +148,6 @@ function AppRoutes() {
       </Suspense>
     </div>
   );
-}
-
-function App() {
-  return <AppRoutes />;
 }
 
 export default App;

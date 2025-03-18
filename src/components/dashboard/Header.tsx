@@ -18,6 +18,7 @@ import {
   User,
   CarFront,
   Users,
+  MapPin,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { changelog } from "./Changelog";
@@ -108,6 +109,10 @@ const Header = ({
               <Calendar className="h-4 w-4 mr-2" />
               Storico Prenotazioni
             </Button>
+            <Button variant="ghost" onClick={() => navigate("/map")}>
+              <MapPin className="h-4 w-4 mr-2" />
+              Mappa Veicoli
+            </Button>
           </nav>
         </div>
 
@@ -154,6 +159,10 @@ const Header = ({
                 <DropdownMenuItem onClick={() => navigate("/booking-history")}>
                   <Calendar className="h-4 w-4 mr-2" />
                   Storico Prenotazioni
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/map")}>
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Mappa Veicoli
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {profile.role === "admin" && (

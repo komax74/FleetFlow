@@ -3,6 +3,7 @@ import Header from "./dashboard/Header";
 import VehicleGrid from "./dashboard/VehicleGrid";
 import BookingCalendar from "./dashboard/BookingCalendar";
 import { Dialog, DialogContent } from "./ui/dialog";
+import MapboxMap from "./dashboard/MapboxMap";
 
 interface HomeProps {
   initialView?: "grid" | "calendar";
@@ -33,11 +34,13 @@ const Home = ({ initialView = "grid" }: HomeProps) => {
             onBookVehicle={handleBookVehicle}
             onReturnVehicle={handleReturnVehicle}
           />
-        ) : (
+        ) : view === "calendar" ? (
           <BookingCalendar
             selectedVehicle={selectedVehicle}
             onDateSelect={() => {}}
           />
+        ) : (
+          <MapboxMap />
         )}
       </main>
 

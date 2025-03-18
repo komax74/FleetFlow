@@ -46,15 +46,37 @@ const MyBookings = () => {
     mileage: "",
     location: "",
     notes: "",
+    location_lat: null,
+    location_lng: null,
+    custom_location: false,
   });
   const [currentVehicleMileage, setCurrentVehicleMileage] = useState(0);
   const [showAllBookings, setShowAllBookings] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
+  const [locations, setLocations] = useState([]);
 
   useEffect(() => {
     fetchBookings();
   }, [user?.id, showAllBookings]);
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("locations")
+          .select("*")
+          .order("name", { ascending: true });
+
+        if (error) throw error;
+        setLocations(data || []);
+      } catch (error) {
+        console.error("Error fetching locations:", error);
+      }
+    };
+
+    fetchLocations();
+  }, []);
 
   const fetchBookings = async () => {
     if (!user) return;
@@ -251,15 +273,24 @@ const MyBookings = () => {
           status: "completed",
           return_location: returnInfo.location,
           return_notes: returnInfo.notes,
+          location_lat: returnInfo.location_lat || null,
+          location_lng: returnInfo.location_lng || null,
+          custom_location: returnInfo.custom_location || false,
         })
         .eq("id", booking.id);
 
       if (bookingError) throw bookingError;
 
-      // Update vehicle mileage
+      // Update vehicle mileage and location
       const { error: vehicleError } = await supabase
         .from("vehicles")
-        .update({ mileage: parseInt(returnInfo.mileage) })
+        .update({
+          mileage: parseInt(returnInfo.mileage),
+          last_location: returnInfo.location,
+          location_lat: returnInfo.location_lat || null,
+          location_lng: returnInfo.location_lng || null,
+          custom_location: returnInfo.custom_location || false,
+        })
         .eq("id", booking.vehicle_id);
 
       if (vehicleError) throw vehicleError;
@@ -269,7 +300,14 @@ const MyBookings = () => {
         description: "Veicolo restituito con successo",
       });
 
-      setReturnInfo({ mileage: "", location: "", notes: "" });
+      setReturnInfo({
+        mileage: "",
+        location: "",
+        notes: "",
+        location_lat: null,
+        location_lng: null,
+        custom_location: false,
+      });
       fetchBookings();
     } catch (error) {
       console.error("Error returning vehicle:", error);
@@ -414,6 +452,13 @@ const MyBookings = () => {
       });
     }
   };
+
+  // Prepare location options for select dropdown
+  const locationOptions = locations.map((location) => (
+    <SelectItem key={location.id} value={location.name}>
+      {location.name}
+    </SelectItem>
+  ));
 
   return (
     <div>
@@ -677,6 +722,9 @@ const MyBookings = () => {
                                         mileage: "",
                                         location: "",
                                         notes: "",
+                                        location_lat: null,
+                                        location_lng: null,
+                                        custom_location: false,
                                       });
                                     }
                                   }}
@@ -725,36 +773,165 @@ const MyBookings = () => {
                                       </div>
                                       <div className="grid gap-2">
                                         <Label>Posizione di restituzione</Label>
-                                        <Select
-                                          value={returnInfo.location}
-                                          onValueChange={(value) =>
-                                            setReturnInfo({
-                                              ...returnInfo,
-                                              location: value,
-                                            })
-                                          }
-                                        >
-                                          <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Seleziona posizione" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="Fronte Ufficio">
-                                              Fronte Ufficio
-                                            </SelectItem>
-                                            <SelectItem value="Fronte Sanar">
-                                              Fronte Sanar
-                                            </SelectItem>
-                                            <SelectItem value="Lato Ufficio">
-                                              Lato Ufficio
-                                            </SelectItem>
-                                            <SelectItem value="Fronte Gavabaccio">
-                                              Fronte Gavabaccio
-                                            </SelectItem>
-                                            <SelectItem value="Lato Veraldi">
-                                              Lato Veraldi
-                                            </SelectItem>
-                                          </SelectContent>
-                                        </Select>
+                                        <div className="grid gap-4">
+                                          <Select
+                                            value={returnInfo.location}
+                                            onValueChange={(value) =>
+                                              setReturnInfo({
+                                                ...returnInfo,
+                                                location: value,
+                                              })
+                                            }
+                                          >
+                                            <SelectTrigger className="w-full">
+                                              <SelectValue placeholder="Seleziona posizione" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {/* Carica le posizioni dinamicamente dal database */}
+                                              {locationOptions}
+                                            </SelectContent>
+                                          </Select>
+
+                                          <div>
+                                            <Button
+                                              type="button"
+                                              variant="outline"
+                                              className="w-full flex items-center justify-center gap-2"
+                                              onClick={() => {
+                                                // Chiedi il permesso per la geolocalizzazione
+                                                if (navigator.geolocation) {
+                                                  navigator.geolocation.getCurrentPosition(
+                                                    (position) => {
+                                                      // Imposta la posizione GPS
+                                                      setReturnInfo({
+                                                        ...returnInfo,
+                                                        location:
+                                                          "Posizione GPS",
+                                                        location_lat:
+                                                          position.coords
+                                                            .latitude,
+                                                        location_lng:
+                                                          position.coords
+                                                            .longitude,
+                                                        custom_location: true,
+                                                      });
+
+                                                      toast({
+                                                        title:
+                                                          "Posizione rilevata",
+                                                        description:
+                                                          "La tua posizione GPS è stata acquisita con successo",
+                                                      });
+                                                    },
+                                                    (error) => {
+                                                      console.error(
+                                                        "Error getting location:",
+                                                        error,
+                                                      );
+                                                      toast({
+                                                        title: "Errore",
+                                                        description:
+                                                          "Impossibile rilevare la posizione. Verifica i permessi del browser.",
+                                                        variant: "destructive",
+                                                      });
+                                                    },
+                                                  );
+                                                } else {
+                                                  toast({
+                                                    title: "Errore",
+                                                    description:
+                                                      "La geolocalizzazione non è supportata da questo browser.",
+                                                    variant: "destructive",
+                                                  });
+                                                }
+                                              }}
+                                            >
+                                              <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                width="16"
+                                                height="16"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                className="h-4 w-4"
+                                              >
+                                                <circle
+                                                  cx="12"
+                                                  cy="12"
+                                                  r="10"
+                                                />
+                                                <circle cx="12" cy="12" r="1" />
+                                                <line
+                                                  x1="12"
+                                                  y1="2"
+                                                  x2="12"
+                                                  y2="4"
+                                                />
+                                                <line
+                                                  x1="12"
+                                                  y1="20"
+                                                  x2="12"
+                                                  y2="22"
+                                                />
+                                                <line
+                                                  x1="4.93"
+                                                  y1="4.93"
+                                                  x2="6.34"
+                                                  y2="6.34"
+                                                />
+                                                <line
+                                                  x1="17.66"
+                                                  y1="17.66"
+                                                  x2="19.07"
+                                                  y2="19.07"
+                                                />
+                                                <line
+                                                  x1="2"
+                                                  y1="12"
+                                                  x2="4"
+                                                  y2="12"
+                                                />
+                                                <line
+                                                  x1="20"
+                                                  y1="12"
+                                                  x2="22"
+                                                  y2="12"
+                                                />
+                                                <line
+                                                  x1="4.93"
+                                                  y1="19.07"
+                                                  x2="6.34"
+                                                  y2="17.66"
+                                                />
+                                                <line
+                                                  x1="17.66"
+                                                  y1="6.34"
+                                                  x2="19.07"
+                                                  y2="4.93"
+                                                />
+                                              </svg>
+                                              Usa posizione GPS attuale
+                                            </Button>
+                                            {returnInfo.location ===
+                                              "Posizione GPS" &&
+                                              returnInfo.location_lat &&
+                                              returnInfo.location_lng && (
+                                                <p className="text-xs text-green-600 mt-1">
+                                                  Posizione GPS rilevata:{" "}
+                                                  {returnInfo.location_lat.toFixed(
+                                                    6,
+                                                  )}
+                                                  ,{" "}
+                                                  {returnInfo.location_lng.toFixed(
+                                                    6,
+                                                  )}
+                                                </p>
+                                              )}
+                                          </div>
+                                        </div>
                                       </div>
                                       <div className="grid gap-2 mt-2">
                                         <Label>Note</Label>
