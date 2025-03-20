@@ -1,4 +1,4 @@
-import { Suspense, useEffect } from "react";
+import { Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 import Home from "./components/home";
 import VehicleManagement from "./components/dashboard/VehicleManagement";
@@ -29,48 +29,17 @@ import {
 import { useToast } from "./components/ui/use-toast";
 
 function App() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (user) {
-      // Configura il listener per i messaggi in primo piano
-      const unsubscribe = onMessageListener();
-
-      // Controlla se è un nuovo login (dopo logout)
-      const lastLoginTime = localStorage.getItem("last_login_time");
-      const currentTime = new Date().getTime();
-      localStorage.setItem("last_login_time", currentTime.toString());
-
-      // Forza sempre la rimozione del flag per mostrare il popup di notifiche
-      localStorage.removeItem("notifications_ignored");
-
-      // Se è passato più di un'ora dall'ultimo login o è il primo login
-      const isNewLogin =
-        !lastLoginTime || currentTime - parseInt(lastLoginTime) > 3600000;
-
-      // Se è un nuovo login e l'utente non ha ancora deciso sulle notifiche
-      if (
-        isNewLogin &&
-        "Notification" in window &&
-        Notification.permission === "default"
-      ) {
-        // Rimuoviamo il flag di notifiche ignorate per mostrare nuovamente il popup
-        localStorage.removeItem("notifications_ignored");
-
-        // Forza il reset dello stato delle notifiche per mostrare il popup
-        if ("Notification" in window) {
-          console.log("Forzando la visualizzazione del popup di notifiche");
-        }
-      }
-
-      return () => {
-        if (typeof unsubscribe === "function") {
-          unsubscribe();
-        }
-      };
-    }
-  }, [user]);
+  // If still loading, show loading indicator
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   if (!user) {
     return <LoginForm />;

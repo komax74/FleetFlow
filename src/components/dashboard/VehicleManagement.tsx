@@ -825,23 +825,45 @@ const VehicleManagement = () => {
                             ? "bg-green-100 text-green-800"
                             : vehicle.status === "booked"
                               ? "bg-orange-100 text-orange-800"
-                              : "bg-red-100 text-red-800"
+                              : vehicle.status === "maintenance" &&
+                                  vehicle.maintenance_start &&
+                                  new Date(vehicle.maintenance_start) <=
+                                    new Date()
+                                ? "bg-red-100 text-red-800"
+                                : vehicle.status === "maintenance"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-red-100 text-red-800"
                         }`}
                       >
                         {vehicle.status === "available"
                           ? "Disponibile"
                           : vehicle.status === "booked"
                             ? "Prenotato"
-                            : "In Manutenzione"}
+                            : vehicle.status === "maintenance" &&
+                                vehicle.maintenance_start &&
+                                new Date(vehicle.maintenance_start) <=
+                                  new Date()
+                              ? "In Manutenzione"
+                              : vehicle.status === "maintenance"
+                                ? "Manutenzione Programmata"
+                                : "In Manutenzione"}
                       </span>
                     </div>
                     {vehicle.status === "maintenance" &&
                       vehicle.maintenance_start && (
-                        <div className="mt-2 p-2 bg-red-50 rounded-[12px]">
-                          <p className="text-sm font-medium text-red-800">
-                            In Manutenzione
+                        <div
+                          className={`mt-2 p-2 rounded-[12px] ${new Date(vehicle.maintenance_start) <= new Date() ? "bg-red-50" : "bg-yellow-50"}`}
+                        >
+                          <p
+                            className={`text-sm font-medium ${new Date(vehicle.maintenance_start) <= new Date() ? "text-red-800" : "text-yellow-800"}`}
+                          >
+                            {new Date(vehicle.maintenance_start) <= new Date()
+                              ? "In Manutenzione"
+                              : "Manutenzione Programmata"}
                           </p>
-                          <p className="text-xs text-red-600 mt-1">
+                          <p
+                            className={`text-xs mt-1 ${new Date(vehicle.maintenance_start) <= new Date() ? "text-red-600" : "text-yellow-700"}`}
+                          >
                             {new Date(
                               vehicle.maintenance_start,
                             ).toLocaleDateString()}{" "}
@@ -850,7 +872,9 @@ const VehicleManagement = () => {
                               vehicle.maintenance_end,
                             ).toLocaleDateString()}
                           </p>
-                          <p className="text-xs text-red-600 mt-1">
+                          <p
+                            className={`text-xs mt-1 ${new Date(vehicle.maintenance_start) <= new Date() ? "text-red-600" : "text-yellow-700"}`}
+                          >
                             {vehicle.maintenance_reason}
                           </p>
                         </div>

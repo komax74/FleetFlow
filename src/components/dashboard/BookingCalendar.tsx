@@ -105,6 +105,17 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     } else if (initialVehicle) {
       setSelectedVehicle(initialVehicle);
     }
+
+    // Reset date selection when vehicle changes
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    setDateRange({
+      startDate: today,
+      endDate: today,
+      key: "selection",
+    });
+    setPickupTime("");
+    setReturnTime("");
   }, [initialVehicle]);
 
   React.useEffect(() => {
@@ -189,10 +200,72 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
 
     const dates = getDatesInRange(fixedStartDate, fixedEndDate);
 
-    // Check if any of the selected dates are fully booked
-    const hasUnavailableDates = dates.some((date) => isDateFullyBooked(date));
-    if (hasUnavailableDates) {
-      return; // Don't update the selection if any date is unavailable
+    // Check if any of the selected dates are in maintenance or fully booked
+    const hasMaintenanceDates = dates.some((date) => getMaintenanceInfo(date));
+    const hasFullyBookedDates = dates.some(
+      (date) => isDateFullyBooked(date) && !getMaintenanceInfo(date),
+    );
+
+    // Handle single date click for maintenance, fully booked, or partially booked
+    if (fixedStartDate.getTime() === fixedEndDate.getTime()) {
+      const clickedDate = fixedStartDate;
+
+      if (getMaintenanceInfo(clickedDate)) {
+        // If maintenance date is clicked, show maintenance info
+        setSelectedDayBookings({
+          day: clickedDate,
+          bookings: [],
+          maintenanceReason: getMaintenanceInfo(clickedDate),
+        });
+        return; // Don't update selection for maintenance dates
+      }
+
+      if (isDateFullyBooked(clickedDate)) {
+        // If fully booked date is clicked, show bookings
+        const dayBookings = getBookingsForDay(clickedDate);
+        setSelectedDayBookings({
+          day: clickedDate,
+          bookings: dayBookings,
+        });
+        return; // Don't update selection for fully booked dates
+      }
+
+      if (isDatePartiallyBooked(clickedDate)) {
+        // If partially booked date is clicked, show bookings but allow selection
+        const dayBookings = getBookingsForDay(clickedDate);
+        setSelectedDayBookings({
+          day: clickedDate,
+          bookings: dayBookings,
+        });
+        // Continue with selection for partially booked dates
+      }
+    } else {
+      // For date range selection
+      if (hasMaintenanceDates) {
+        // If maintenance date is in range, show maintenance info
+        const maintenanceDate = dates.find((date) => getMaintenanceInfo(date));
+        if (maintenanceDate) {
+          setSelectedDayBookings({
+            day: maintenanceDate,
+            bookings: [],
+            maintenanceReason: getMaintenanceInfo(maintenanceDate),
+          });
+        }
+        return; // Don't update selection for maintenance dates
+      }
+
+      if (hasFullyBookedDates) {
+        // If fully booked date is in range, show bookings
+        const fullyBookedDate = dates.find((date) => isDateFullyBooked(date));
+        if (fullyBookedDate) {
+          const dayBookings = getBookingsForDay(fullyBookedDate);
+          setSelectedDayBookings({
+            day: fullyBookedDate,
+            bookings: dayBookings,
+          });
+        }
+        return; // Don't update selection for fully booked dates
+      }
     }
 
     // If clicking the same date again, clear the selection
@@ -223,14 +296,6 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     if (fixedStartDate.getMonth() !== fixedEndDate.getMonth()) {
       // Force a re-render to ensure the calendar updates correctly
       setTimeout(() => {
-        // Update the DOM directly to fix hover effect
-        const rangeElements = document.querySelectorAll(".rbc-day-bg");
-        rangeElements.forEach((el) => {
-          if (el.classList.contains("rbc-in-range-selection")) {
-            el.style.backgroundColor = "rgba(14, 165, 233, 0.2)";
-          }
-        });
-
         // Re-apply the selection
         setDateRange(fixedRange);
       }, 50);
@@ -273,13 +338,27 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     return bookings.some((booking) => {
       const bookingStart = new Date(booking.start_date);
       const bookingEnd = new Date(booking.end_date);
-      const bookingStartHour = parseInt(booking.pickup_time.split(":")[0]);
-      const bookingEndHour = parseInt(booking.return_time.split(":")[0]);
 
+      // For multi-day bookings, middle days are considered fully booked
+      if (date > bookingStart && date < bookingEnd) {
+        return true;
+      }
+
+      // For start or end day, check if booking covers most of the day
       if (date.toDateString() === bookingStart.toDateString()) {
+        const bookingStartHour = parseInt(booking.pickup_time.split(":")[0]);
+        const bookingEndHour = parseInt(booking.return_time.split(":")[0]);
         // If booking covers most of the day (more than 6 hours)
         return bookingEndHour - bookingStartHour > 6;
       }
+
+      // For end day of multi-day booking
+      if (date.toDateString() === bookingEnd.toDateString()) {
+        const bookingEndHour = parseInt(booking.return_time.split(":")[0]);
+        // If return time is after noon, consider it fully booked
+        return bookingEndHour >= 12;
+      }
+
       return false;
     });
   };
@@ -287,10 +366,43 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   const isDatePartiallyBooked = (date: Date) => {
     if (!selectedVehicle) return false;
 
+    // Check if date is in maintenance or fully booked first
+    if (getMaintenanceInfo(date) || isDateFullyBooked(date)) {
+      return false;
+    }
+
+    // Normalize the date for comparison (set to noon)
+    const normalizedDate = new Date(date);
+    normalizedDate.setHours(12, 0, 0, 0);
+
+    // Check if there are any bookings for this date
     return bookings.some((booking) => {
       const bookingStart = new Date(booking.start_date);
+      bookingStart.setHours(12, 0, 0, 0);
+
       const bookingEnd = new Date(booking.end_date);
-      return date >= bookingStart && date <= bookingEnd;
+      bookingEnd.setHours(12, 0, 0, 0);
+
+      // Check if the date is within the booking range
+      if (normalizedDate >= bookingStart && normalizedDate <= bookingEnd) {
+        // For start date, check if booking is less than or equal to 6 hours (not fully booked)
+        if (normalizedDate.getTime() === bookingStart.getTime()) {
+          const bookingStartHour = parseInt(booking.pickup_time.split(":")[0]);
+          const bookingEndHour = parseInt(booking.return_time.split(":")[0]);
+          return bookingEndHour - bookingStartHour <= 6;
+        }
+
+        // For end date of multi-day booking
+        if (normalizedDate.getTime() === bookingEnd.getTime()) {
+          const bookingEndHour = parseInt(booking.return_time.split(":")[0]);
+          // If return time is before noon, consider it partially booked
+          return bookingEndHour < 12;
+        }
+
+        // For middle days of multi-day bookings, they are fully booked
+        return false;
+      }
+      return false;
     });
   };
 
@@ -315,22 +427,44 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     return bookings.filter((booking) => {
       const bookingStart = new Date(booking.start_date);
       const bookingEnd = new Date(booking.end_date);
-      return day >= bookingStart && day <= bookingEnd;
+
+      // Ensure dates are compared properly by setting hours to noon
+      const normalizedDay = new Date(day);
+      normalizedDay.setHours(12, 0, 0, 0);
+
+      const normalizedStart = new Date(bookingStart);
+      normalizedStart.setHours(12, 0, 0, 0);
+
+      const normalizedEnd = new Date(bookingEnd);
+      normalizedEnd.setHours(12, 0, 0, 0);
+
+      return normalizedDay >= normalizedStart && normalizedDay <= normalizedEnd;
     });
   };
 
   const customDayContent = (day: Date) => {
-    const isFullyBooked = isDateFullyBooked(day);
-    const isPartiallyBooked = !isFullyBooked && isDatePartiallyBooked(day);
+    const isInMaintenance = !!getMaintenanceInfo(day);
+    const isFullyBooked = !isInMaintenance && isDateFullyBooked(day);
+    const isPartiallyBooked =
+      !isInMaintenance && !isFullyBooked && isDatePartiallyBooked(day);
+
+    // Only allow selection if not in maintenance, not fully booked, and not a past date
+    const isSelectable =
+      !isInMaintenance &&
+      !isFullyBooked &&
+      day >= new Date(new Date().setHours(0, 0, 0, 0));
+
     const isSelected =
+      isSelectable &&
       dateRange.startDate &&
       dateRange.endDate &&
       day >= dateRange.startDate &&
       day <= dateRange.endDate;
+
     const isToday = day.toDateString() === new Date().toDateString();
     const maintenanceReason = getMaintenanceInfo(day);
     const dayBookings = getBookingsForDay(day);
-    const isInMaintenance = !!maintenanceReason;
+    const isPastDate = day < new Date(new Date().setHours(0, 0, 0, 0));
 
     // Calculate dynamic height based on number of bookings
     const bookingsCount = dayBookings.length;
@@ -341,13 +475,25 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       minHeight + bookingsCount * heightPerBooking,
     );
 
+    // Add specific classes for maintenance and fully booked days
+    const dayClasses = [
+      "relative",
+      isInMaintenance ? "maintenance-day cursor-not-allowed" : "",
+      isFullyBooked ? "fully-booked-day cursor-not-allowed" : "",
+      isPastDate ? "past-day cursor-not-allowed" : "cursor-pointer",
+      isPartiallyBooked ? "partially-booked-day" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
     return (
       <div
-        className={`relative ${isFullyBooked || isInMaintenance ? "cursor-not-allowed" : "cursor-pointer"}`}
+        className={dayClasses}
         style={{
           height: "100%",
           width: "100%",
           minHeight: `${dynamicHeight}px`,
+          position: "relative",
         }}
         onClick={() => {
           if (isInMaintenance) {
@@ -357,49 +503,61 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
               bookings: [],
               maintenanceReason: maintenanceReason,
             });
+          } else if (isFullyBooked && dayBookings.length > 0) {
+            // Mostra finestra con prenotazioni per giorni completamente prenotati
+            setSelectedDayBookings({ day, bookings: dayBookings });
           } else if (isPartiallyBooked && dayBookings.length > 0) {
-            // Mostra finestra con prenotazioni
+            // Mostra finestra con prenotazioni per giorni parzialmente prenotati
             setSelectedDayBookings({ day, bookings: dayBookings });
           }
         }}
       >
         <div
+          className={`${isSelected && !isInMaintenance && !isFullyBooked && !isPastDate ? "selected-date" : ""}`}
           style={{
             height: "100%",
             width: "100%",
-            backgroundColor: isSelected
-              ? "#0ea5e9" // Blu selezione sempre sopra
-              : isInMaintenance
-                ? "#dc2626" // Rosso scuro per manutenzione
-                : isFullyBooked
-                  ? "#1e40af" // Blu scuro per completamente prenotato
-                  : isPartiallyBooked
-                    ? "#fef3c7" // Giallo per parzialmente prenotato
-                    : "transparent",
+            backgroundColor: isInMaintenance
+              ? "#dc2626" // Rosso scuro per manutenzione
+              : isFullyBooked
+                ? "#1e40af" // Blu scuro per completamente prenotato
+                : isPartiallyBooked
+                  ? "#fef3c7" // Giallo per parzialmente prenotato
+                  : isPastDate
+                    ? "#e5e7eb" // Grigio per date passate
+                    : isSelected &&
+                        !isInMaintenance &&
+                        !isFullyBooked &&
+                        !isPastDate
+                      ? "#0ea5e9" // Blu selezione solo se non è in manutenzione o prenotato
+                      : "transparent",
             position: "relative",
-            zIndex: isSelected ? 10 : 0, // Aumentato z-index per la selezione
+            zIndex: isInMaintenance || isFullyBooked || isPastDate ? 10 : 0,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             borderRadius: "8px",
-            color: isSelected
-              ? "white"
-              : isToday
-                ? "#0ea5e9"
-                : isInMaintenance || isFullyBooked
-                  ? "white"
-                  : isPartiallyBooked
-                    ? "#1e40af" // Testo blu su sfondo giallo
-                    : "inherit",
-            pointerEvents: isFullyBooked || isInMaintenance ? "none" : "auto",
+            border: isToday ? "2px solid #0ea5e9" : "none",
+            pointerEvents:
+              isInMaintenance || isFullyBooked || isPastDate ? "none" : "auto",
             fontWeight: isToday ? "bold" : "normal",
           }}
         >
-          {day.getDate()}
+          <span
+            style={{
+              color:
+                isInMaintenance || isFullyBooked
+                  ? "white"
+                  : isPastDate
+                    ? "#9ca3af"
+                    : isPartiallyBooked
+                      ? "#1e40af"
+                      : "inherit",
+            }}
+          >
+            {day.getDate()}
+          </span>
         </div>
-        {isPartiallyBooked && dayBookings.length > 0 && (
-          <div className="absolute top-0 right-0 w-2 h-2 bg-blue-500 rounded-full mr-1 mt-1"></div>
-        )}
       </div>
     );
   };
@@ -407,6 +565,22 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   const isTimeSlotAvailable = (hour: number) => {
     const selectedDate = dateRange.startDate;
     return !bookings.some((booking) => {
+      if (
+        new Date(booking.start_date).toDateString() ===
+        selectedDate.toDateString()
+      ) {
+        const bookingStart = parseInt(booking.pickup_time.split(":")[0]);
+        const bookingEnd = parseInt(booking.return_time.split(":")[0]);
+        return hour >= bookingStart && hour <= bookingEnd;
+      }
+      return false;
+    });
+  };
+
+  // Get booking details for a specific time slot
+  const getBookingsForTimeSlot = (hour: number) => {
+    const selectedDate = dateRange.startDate;
+    return bookings.filter((booking) => {
       if (
         new Date(booking.start_date).toDateString() ===
         selectedDate.toDateString()
@@ -438,14 +612,18 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   };
 
   const getAvailablePickupTimes = () => {
-    return Array.from({ length: 12 }, (_, i) => i + 8).filter((hour) =>
-      isTimeSlotAvailable(hour),
-    );
+    // Filter out hours that are already booked
+    return Array.from({ length: 12 }, (_, i) => i + 8).filter((hour) => {
+      // Check if this hour is available
+      return isTimeSlotAvailable(hour);
+    });
   };
 
   const getAvailableReturnTimes = () => {
     if (!pickupTime) return [];
     const pickupHour = parseInt(pickupTime);
+
+    // Only show hours after pickup time that don't overlap with existing bookings
     return Array.from({ length: 12 }, (_, i) => i + 8).filter(
       (hour) => hour > pickupHour && isTimeRangeAvailable(pickupHour, hour),
     );
@@ -484,6 +662,17 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                       <button
                         key={vehicle.id}
                         onClick={() => {
+                          // Reset date selection when vehicle changes
+                          const today = new Date();
+                          today.setHours(12, 0, 0, 0);
+                          setDateRange({
+                            startDate: today,
+                            endDate: today,
+                            key: "selection",
+                          });
+                          setPickupTime("");
+                          setReturnTime("");
+
                           setSelectedVehicle(vehicle.id);
                           onVehicleSelect(vehicle.id);
                         }}
@@ -537,6 +726,10 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                       // Increase calendar height to prevent cutting off last row
                       calendarClassName="custom-calendar-height"
                       fixedHeight={true}
+                      color="#0ea5e9"
+                      // Ensure consistent styling for all days in range
+                      staticRanges={[]}
+                      inputRanges={[]}
                     />
                   </div>
                   {!selectedVehicle && (
@@ -624,8 +817,10 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                         </Select>
                       </div>
 
-                      {dateRange.startDate.toDateString() !==
-                        dateRange.endDate.toDateString() && (
+                      {(dateRange.startDate.toDateString() !==
+                        dateRange.endDate.toDateString() ||
+                        (selectedDayBookings &&
+                          isDatePartiallyBooked(selectedDayBookings.day))) && (
                         <div className="flex items-center justify-between mt-2">
                           <span className="text-sm font-medium">
                             Data di riconsegna:
@@ -682,11 +877,30 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                         <SelectValue placeholder="Orario di ritiro" />
                       </SelectTrigger>
                       <SelectContent>
-                        {getAvailablePickupTimes().map((hour) => (
-                          <SelectItem key={hour} value={hour.toString()}>
-                            {`${hour}:00`}
-                          </SelectItem>
-                        ))}
+                        {Array.from({ length: 12 }, (_, i) => i + 8).map(
+                          (hour) => {
+                            const isAvailable = isTimeSlotAvailable(hour);
+                            const bookingsForSlot =
+                              getBookingsForTimeSlot(hour);
+                            return (
+                              <SelectItem
+                                key={hour}
+                                value={hour.toString()}
+                                disabled={!isAvailable}
+                                className={
+                                  !isAvailable
+                                    ? "text-gray-400 cursor-not-allowed"
+                                    : ""
+                                }
+                              >
+                                {`${hour}:00`}
+                                {!isAvailable &&
+                                  bookingsForSlot.length > 0 &&
+                                  " (Prenotato)"}
+                              </SelectItem>
+                            );
+                          },
+                        )}
                       </SelectContent>
                     </Select>
 
@@ -699,11 +913,34 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                         <SelectValue placeholder="Orario di consegna" />
                       </SelectTrigger>
                       <SelectContent>
-                        {getAvailableReturnTimes().map((hour) => (
-                          <SelectItem key={hour} value={hour.toString()}>
-                            {`${hour}:00`}
-                          </SelectItem>
-                        ))}
+                        {Array.from({ length: 12 }, (_, i) => i + 8)
+                          .filter((hour) =>
+                            pickupTime ? hour > parseInt(pickupTime) : true,
+                          )
+                          .map((hour) => {
+                            const isAvailable = pickupTime
+                              ? isTimeRangeAvailable(parseInt(pickupTime), hour)
+                              : false;
+                            const bookingsForSlot =
+                              getBookingsForTimeSlot(hour);
+                            return (
+                              <SelectItem
+                                key={hour}
+                                value={hour.toString()}
+                                disabled={!isAvailable}
+                                className={
+                                  !isAvailable
+                                    ? "text-gray-400 cursor-not-allowed"
+                                    : ""
+                                }
+                              >
+                                {`${hour}:00`}
+                                {!isAvailable &&
+                                  bookingsForSlot.length > 0 &&
+                                  " (Prenotato)"}
+                              </SelectItem>
+                            );
+                          })}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1247,23 +1484,27 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                         ))}
                       </div>
 
-                      <div className="mt-6 flex justify-center">
-                        <Button
-                          className="bg-blue-500 hover:bg-blue-600 text-white"
-                          onClick={() => {
-                            // Seleziona la data e chiudi il modale
-                            const range = {
-                              startDate: selectedDayBookings.day,
-                              endDate: selectedDayBookings.day,
-                              key: "selection",
-                            };
-                            setDateRange(range);
-                            setSelectedDayBookings(null);
-                          }}
-                        >
-                          Prenota ugualmente l'auto
-                        </Button>
-                      </div>
+                      {!isDateFullyBooked(selectedDayBookings.day) &&
+                        !getMaintenanceInfo(selectedDayBookings.day) &&
+                        isDatePartiallyBooked(selectedDayBookings.day) && (
+                          <div className="mt-6 flex justify-center">
+                            <Button
+                              className="bg-blue-500 hover:bg-blue-600 text-white"
+                              onClick={() => {
+                                // Seleziona la data e chiudi il modale
+                                const range = {
+                                  startDate: selectedDayBookings.day,
+                                  endDate: selectedDayBookings.day,
+                                  key: "selection",
+                                };
+                                setDateRange(range);
+                                setSelectedDayBookings(null);
+                              }}
+                            >
+                              Prenota ugualmente l'auto
+                            </Button>
+                          </div>
+                        )}
                     </>
                   )}
                 </div>

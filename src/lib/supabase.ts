@@ -15,7 +15,6 @@ let supabaseAdminInstance: ReturnType<typeof createClient<Database>> | null =
 // Standard client for authenticated users
 export const supabase = (() => {
   if (!supabaseInstance) {
-    console.log("Initializing Supabase client with URL:", supabaseUrl);
     supabaseInstance = createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: true,
@@ -30,7 +29,6 @@ export const supabase = (() => {
 // Admin client with service role permissions
 export const supabaseAdmin = (() => {
   if (!supabaseAdminInstance) {
-    console.log("Initializing Supabase admin client with URL:", supabaseUrl);
     supabaseAdminInstance = createClient<Database>(
       supabaseUrl,
       supabaseServiceKey,

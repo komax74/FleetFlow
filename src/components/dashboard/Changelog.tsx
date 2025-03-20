@@ -5,6 +5,16 @@ interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "0.9.5",
+    changes: [
+      "Migliorata visualizzazione mappa veicoli",
+      "Ottimizzata gestione dei marker sulla mappa",
+      "Aggiunte etichette ai veicoli sulla mappa",
+      "Migliorata stabilità durante lo zoom della mappa",
+      "Rimossi log di debug non necessari",
+    ],
+  },
+  {
     version: "0.9.4",
     changes: [
       "Risolto problema di visualizzazione calendario",

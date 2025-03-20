@@ -265,6 +265,30 @@ const MyBookings = () => {
       return;
     }
 
+    // Verifica che il chilometraggio non sia inferiore a quello di partenza
+    const newMileage = parseInt(returnInfo.mileage);
+    if (newMileage < currentVehicleMileage) {
+      toast({
+        title: "Errore",
+        description:
+          "Il chilometraggio non può essere inferiore a quello di partenza",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Verifica se il chilometraggio è molto più alto (più di 400 km)
+    const mileageDifference = newMileage - currentVehicleMileage;
+    // Non blocchiamo più con un alert, ma mostriamo solo un avviso visivo nel form
+
+    // Log per debug
+    console.log("Dati di restituzione:", {
+      location: returnInfo.location,
+      lat: returnInfo.location_lat,
+      lng: returnInfo.location_lng,
+      custom: returnInfo.custom_location,
+    });
+
     try {
       // Update booking status
       const { error: bookingError } = await supabase
@@ -756,13 +780,39 @@ const MyBookings = () => {
                                         <Input
                                           type="number"
                                           value={returnInfo.mileage}
-                                          onChange={(e) =>
+                                          onChange={(e) => {
+                                            const newMileage = parseInt(
+                                              e.target.value,
+                                            );
                                             setReturnInfo({
                                               ...returnInfo,
                                               mileage: e.target.value,
-                                            })
-                                          }
+                                            });
+                                          }}
                                         />
+                                        {returnInfo.mileage &&
+                                          parseInt(returnInfo.mileage) <
+                                            currentVehicleMileage && (
+                                            <p className="text-sm text-red-600 mt-1">
+                                              Errore: Il chilometraggio non può
+                                              essere inferiore a quello di
+                                              partenza ({currentVehicleMileage}{" "}
+                                              km)
+                                            </p>
+                                          )}
+                                        {returnInfo.mileage &&
+                                          parseInt(returnInfo.mileage) -
+                                            currentVehicleMileage >
+                                            400 && (
+                                            <p className="text-sm text-blue-600 mt-1">
+                                              Attenzione: Hai inserito{" "}
+                                              {parseInt(returnInfo.mileage) -
+                                                currentVehicleMileage}{" "}
+                                              km in più rispetto alla partenza.
+                                              Sei sicuro che il valore sia
+                                              corretto?
+                                            </p>
+                                          )}
                                         {returnInfo.mileage && (
                                           <p className="text-sm text-gray-600 mt-1">
                                             Chilometri percorsi:{" "}
@@ -780,6 +830,10 @@ const MyBookings = () => {
                                               setReturnInfo({
                                                 ...returnInfo,
                                                 location: value,
+                                                // Reset GPS coordinates if selecting a predefined location
+                                                location_lat: null,
+                                                location_lng: null,
+                                                custom_location: false,
                                               })
                                             }
                                           >
@@ -789,6 +843,13 @@ const MyBookings = () => {
                                             <SelectContent>
                                               {/* Carica le posizioni dinamicamente dal database */}
                                               {locationOptions}
+                                              {/* Aggiungi l'opzione per la posizione GPS se è stata rilevata */}
+                                              {returnInfo.location_lat &&
+                                                returnInfo.location_lng && (
+                                                  <SelectItem value="Posizione GPS">
+                                                    Posizione GPS
+                                                  </SelectItem>
+                                                )}
                                             </SelectContent>
                                           </Select>
 
@@ -803,16 +864,23 @@ const MyBookings = () => {
                                                   navigator.geolocation.getCurrentPosition(
                                                     (position) => {
                                                       // Imposta la posizione GPS
+                                                      const lat =
+                                                        position.coords
+                                                          .latitude;
+                                                      const lng =
+                                                        position.coords
+                                                          .longitude;
+                                                      console.log(
+                                                        "Posizione GPS rilevata:",
+                                                        { lat, lng },
+                                                      );
+
                                                       setReturnInfo({
                                                         ...returnInfo,
                                                         location:
                                                           "Posizione GPS",
-                                                        location_lat:
-                                                          position.coords
-                                                            .latitude,
-                                                        location_lng:
-                                                          position.coords
-                                                            .longitude,
+                                                        location_lat: lat,
+                                                        location_lng: lng,
                                                         custom_location: true,
                                                       });
 

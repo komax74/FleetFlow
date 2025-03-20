@@ -128,3 +128,62 @@
   > div {
   height: 800px !important;
 }
+
+/* Styles for calendar dates */
+/* Default style for non-selected dates */
+.rdrDayNumber span {
+  color: #0ea5e9 !important; /* Blue text for non-selected dates */
+}
+
+/* Style for selected dates */
+.selected-date,
+.selected-date span,
+.selected-date div,
+.selected-date .rdrDayNumber span,
+.rdrDayStartPreview span,
+.rdrDayEndPreview span,
+.rdrDayStartOfMonth.rdrDayInRange span,
+.rdrDayEndOfMonth.rdrDayInRange span,
+.rdrDayStartOfWeek.rdrDayInRange span,
+.rdrDayEndOfWeek.rdrDayInRange span,
+.rdrDayInRange span {
+  color: white !important; /* White text for selected dates */
+}
+
+/* Ensure maintenance and fully booked days are not affected by selection */
+.rdrDayStartPreview.maintenance-day span,
+.rdrDayEndPreview.maintenance-day span,
+.rdrDayInRange.maintenance-day span,
+.rdrDayStartPreview.fully-booked-day span,
+.rdrDayEndPreview.fully-booked-day span,
+.rdrDayInRange.fully-booked-day span {
+  color: white !important;
+  background-color: transparent !important;
+}
+
+/* Ensure partially booked days are properly styled */
+.partially-booked-day {
+  position: relative;
+}
+
+/* Fix for first day in range */
+.rdrDayStartOfMonth .rdrDayInRange,
+.rdrDayStartOfWeek .rdrDayInRange,
+.rdrDayStartPreview,
+.rdrDayEndPreview {
+  border-radius: 8px !important;
+  background-color: #0ea5e9 !important;
+}
+
+/* Ensure consistent styling for all days in range */
+.rdrDayToday .rdrDayNumber span::after {
+  background-color: transparent !important;
+}
+
+.rdrDayToday.rdrDayStartOfMonth .rdrInRange,
+.rdrDayToday.rdrDayEndOfMonth .rdrInRange,
+.rdrDayToday.rdrDayStartOfWeek .rdrInRange,
+.rdrDayToday.rdrDayEndOfWeek .rdrInRange {
+  background-color: #0ea5e9 !important;
+  border-radius: 8px !important;
+}
