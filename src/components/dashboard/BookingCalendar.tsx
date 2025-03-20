@@ -541,6 +541,8 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
             pointerEvents:
               isInMaintenance || isFullyBooked || isPastDate ? "none" : "auto",
             fontWeight: isToday ? "bold" : "normal",
+            width: "100%",
+            height: "100%",
           }}
         >
           <span
@@ -552,7 +554,12 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                     ? "#9ca3af"
                     : isPartiallyBooked
                       ? "#1e40af"
-                      : "inherit",
+                      : isSelected &&
+                          !isInMaintenance &&
+                          !isFullyBooked &&
+                          !isPastDate
+                        ? "white"
+                        : "inherit",
             }}
           >
             {day.getDate()}

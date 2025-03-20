@@ -146,11 +146,20 @@
 .rdrDayEndOfMonth.rdrDayInRange span,
 .rdrDayStartOfWeek.rdrDayInRange span,
 .rdrDayEndOfWeek.rdrDayInRange span,
-.rdrDayInRange span {
+.rdrDayInRange span,
+.rdrDaySelected span,
+.rdrDayHovered span,
+.rdrDayHovered .rdrDayNumber span {
   color: white !important; /* White text for selected dates */
 }
 
 /* Ensure maintenance and fully booked days are not affected by selection */
+.maintenance-day,
+.fully-booked-day {
+  position: relative;
+  z-index: 10;
+}
+
 .rdrDayStartPreview.maintenance-day span,
 .rdrDayEndPreview.maintenance-day span,
 .rdrDayInRange.maintenance-day span,
@@ -161,16 +170,31 @@
   background-color: transparent !important;
 }
 
+/* Prevent hover effects on maintenance and fully booked days */
+.maintenance-day:hover,
+.fully-booked-day:hover,
+.maintenance-day .rdrDayHovered,
+.fully-booked-day .rdrDayHovered {
+  background-color: transparent !important;
+}
+
+.maintenance-day:hover .rdrDayNumber span,
+.fully-booked-day:hover .rdrDayNumber span {
+  color: white !important;
+}
+
 /* Ensure partially booked days are properly styled */
 .partially-booked-day {
   position: relative;
 }
 
-/* Fix for first day in range */
+/* Fix for first day in range and single day selection */
 .rdrDayStartOfMonth .rdrDayInRange,
 .rdrDayStartOfWeek .rdrDayInRange,
 .rdrDayStartPreview,
-.rdrDayEndPreview {
+.rdrDayEndPreview,
+.rdrDaySelected,
+.rdrDayHovered {
   border-radius: 8px !important;
   background-color: #0ea5e9 !important;
 }
@@ -183,7 +207,49 @@
 .rdrDayToday.rdrDayStartOfMonth .rdrInRange,
 .rdrDayToday.rdrDayEndOfMonth .rdrInRange,
 .rdrDayToday.rdrDayStartOfWeek .rdrInRange,
-.rdrDayToday.rdrDayEndOfWeek .rdrInRange {
+
+/* Make single day selection look the same as multi-day selection */
+.rdrDay:not(.rdrDayPassive):not(.maintenance-day):not(.fully-booked-day) .rdrInRange ~ .rdrDayNumber span,
+.rdrDay:not(.rdrDayPassive):not(.maintenance-day):not(.fully-booked-day) .rdrStartEdge ~ .rdrDayNumber span,
+.rdrDay:not(.rdrDayPassive):not(.maintenance-day):not(.fully-booked-day) .rdrEndEdge ~ .rdrDayNumber span,
+.rdrDay:not(.rdrDayPassive):not(.maintenance-day):not(.fully-booked-day) .rdrSelected ~ .rdrDayNumber span,
+.rdrDay:not(.rdrDayPassive):not(.maintenance-day):not(.fully-booked-day):hover .rdrDayNumber span,
+.rdrDayHovered:not(.maintenance-day):not(.fully-booked-day) .rdrDayNumber span,
+.rdrDay:not(.maintenance-day):not(.fully-booked-day):hover .rdrDayNumber span {
+  color: white !important;
+}
+
+.rdrDay:not(.rdrDayPassive) .rdrSelected,
+.rdrDay:not(.rdrDayPassive) .rdrInRange,
+.rdrDay:not(.rdrDayPassive) .rdrStartEdge,
+.rdrDay:not(.rdrDayPassive) .rdrEndEdge {
   background-color: #0ea5e9 !important;
   border-radius: 8px !important;
+  height: 100% !important;
+  width: 100% !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+}
+
+.rdrDayToday.rdrDayEndOfWeek .rdrInRange,
+.rdrDayToday.rdrDaySelected,
+.rdrDayToday.rdrDayHovered,
+.rdrDay:not(.maintenance-day):not(.fully-booked-day):hover {
+  background-color: #0ea5e9 !important;
+  border-radius: 8px !important;
+}
+
+/* Ensure hover state has white text */
+.rdrDay:not(.maintenance-day):not(.fully-booked-day):hover .rdrDayNumber span,
+.rdrDayHovered:not(.maintenance-day):not(.fully-booked-day) .rdrDayNumber span,
+.rdrDayStartPreview:not(.maintenance-day):not(.fully-booked-day)
+  .rdrDayNumber
+  span,
+.rdrDayEndPreview:not(.maintenance-day):not(.fully-booked-day)
+  .rdrDayNumber
+  span,
+.rdrDayInRange:not(.maintenance-day):not(.fully-booked-day) .rdrDayNumber span {
+  color: white !important;
 }
