@@ -8,12 +8,12 @@ importScripts(
 
 // Initialize the Firebase app in the service worker by passing the generated config
 const firebaseConfig = {
-  apiKey: "AIzaSyBDT_A3ZtBacna-ZMyMIKj_Gis5V0yn29A",
-  authDomain: "fleetflow-ncg.firebaseapp.com",
-  projectId: "fleetflow-ncg",
-  storageBucket: "fleetflow-ncg.firebasestorage.app",
-  messagingSenderId: "638823613072",
-  appId: "1:638823613072:web:a1b098b77a2dd9eae1ce15",
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: "",
 };
 
 // Error handling for Firebase initialization
